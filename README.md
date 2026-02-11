@@ -1,34 +1,67 @@
-![Olauncher](https://repository-images.githubusercontent.com/278638069/db0acb80-661b-11eb-803e-926cae5dccb4)
+# Olauncher (Modified Fork)
 
+A minimal, text-based Android launcher. Forked from [tanujnotes/Olauncher](https://github.com/tanujnotes/Olauncher) with added features and cleanup.
 
-# Olauncher | Minimal AF Launcher
-AF stands for Ad-Free
+## What's different from upstream
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://f-droid.org/packages/app.olauncher)
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-    alt="Get it on Play Store"
-    height="80">](https://play.google.com/store/apps/details?id=app.olauncher)
+### Multi-widget support
+- Add multiple widgets to your home screen (long-press > Add widget)
+- Swap, remove, resize, or reorder widgets (long-press on a widget)
+- Per-widget height control: Small (100dp), Medium (200dp), Large (300dp)
+- Choose widget placement: above or below your app list (in Settings)
+- Search/filter in the widget picker to quickly find widgets
 
-### Install using [F-Droid](https://f-droid.org/packages/app.olauncher), [Play Store](https://play.google.com/store/apps/details?id=app.olauncher) or the [latest APK](https://github.com/tanujnotes/Olauncher/releases/).
+### Custom gestures
+- Swipe left and right can be mapped to different actions, not just apps
+- Available actions: Open app, Notifications, Search, Lock screen, Camera, Flashlight, None
+- Configure in Settings under the Gestures section
 
-- To maintain the simplicity of the launcher, a few niche features are available but hidden.
+### Per-app screen time in app drawer
+- Daily usage time shown next to each app in the drawer
+- Sort apps by usage time (toggle in Settings, requires usage permission)
+- Requires usage access permission (same as the home screen total)
 
-- Please check out the **[About](https://tanujnotes.substack.com/p/olauncher-minimal-af-launcher?utm_source=github)** page in the Olauncher settings for a complete list of features and **FAQs**.
+### Settings backup & restore
+- Export all settings to a JSON file in your Downloads folder
+- Import settings from a previously exported file
+- Widget data is excluded (device-specific and not transferable)
+- Android auto-backup enabled for seamless cloud restore
 
-##
+### Code quality
+- Prefs.kt refactored with indexed accessors, eliminating 160+ lines of boilerplate
+- Deprecated `onActivityResult`/`startActivityForResult` migrated to `ActivityResultLauncher`
+- All widget error strings moved to `strings.xml` for localization
+- Widget picker uses theme-aware colors (no more invisible text in dark mode)
 
-License: [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+### Cleanup
+- Removed custom dialog overlay system, uses standard Android AlertDialogs
+- Removed permanently-visible first-run tips that were never dismissed
+- Screen time display moved inline next to the clock instead of floating
+- Removed promotional links and cross-app advertising
 
-Dev: [X/twitter](https://x.com/tanujnotes) • [Bluesky](https://bsky.app/profile/tanujnotes.bsky.social)
+## Features (from original)
 
-##
+- Text-only home screen with up to 8 pinned apps
+- Swipe gestures: up for app drawer, left/right for configurable actions, down for notifications or search
+- Double-tap to lock screen
+- Auto-launch apps by typing in the drawer
+- App renaming, hiding, and per-profile support
+- Daily wallpaper rotation
+- Date, time, and battery on home screen
+- Dark / light / system theme
+- Configurable text size and alignment
 
-### My other apps:
+## Building
 
-- [Pro Launcher](https://play.google.com/store/apps/details?id=app.prolauncher) - Pro version of Olauncher with extra features like widgets, weather, folders, etc.
+```
+# Requires Android SDK (min SDK 24, target 35)
+./gradlew assembleDebug
+```
 
-- [Note to Self](https://play.google.com/store/apps/details?id=com.makenotetoself) - Free and [open source](https://github.com/jeerovan/ntsapp) notes app with chat like interface and end-to-end encryption.
+The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
-- [Pentastic](https://play.google.com/store/apps/details?id=app.pentastic) - Minimal todo lists. Free and [open source](https://github.com/tanujnotes/Pentastic).
+## License
+
+[GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
+Based on [Olauncher](https://github.com/tanujnotes/Olauncher) by [tanujnotes](https://github.com/tanujnotes).

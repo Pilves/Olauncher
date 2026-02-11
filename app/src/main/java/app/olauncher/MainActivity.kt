@@ -58,6 +58,8 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var bindWidgetLauncher: ActivityResultLauncher<Intent>
     lateinit var configureWidgetLauncher: ActivityResultLauncher<Intent>
+    lateinit var enableAdminLauncher: ActivityResultLauncher<Intent>
+    lateinit var launcherSelectorLauncher: ActivityResultLauncher<Intent>
 
 //    override fun onBackPressed() {
 //        if (navController.currentDestination?.id != R.id.mainFragment)
@@ -100,6 +102,20 @@ class MainActivity : AppCompatActivity() {
             val success = result.resultCode == Activity.RESULT_OK
             onWidgetConfigureResult?.invoke(success)
             onWidgetConfigureResult = null
+        }
+
+        enableAdminLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK)
+                prefs.lockModeOn = true
+        }
+
+        launcherSelectorLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK)
+                resetLauncherViaFakeActivity()
         }
 
         val onBackPressedCallback = object : OnBackPressedCallback(true) {
@@ -170,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             if (isDefaultLauncher() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 resetLauncherViaFakeActivity()
             else
-                showLauncherSelector(Constants.REQUEST_CODE_LAUNCHER_SELECTOR)
+                showLauncherSelector(launcherSelectorLauncher)
         }
         viewModel.showDialog.observe(this) {
             when (it) {
@@ -250,19 +266,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            Constants.REQUEST_CODE_ENABLE_ADMIN -> {
-                if (resultCode == Activity.RESULT_OK)
-                    prefs.lockModeOn = true
-            }
-
-            Constants.REQUEST_CODE_LAUNCHER_SELECTOR -> {
-                if (resultCode == Activity.RESULT_OK)
-                    resetLauncherViaFakeActivity()
-            }
-        }
-    }
 }

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.view.Gravity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import org.json.JSONObject
 
 class Prefs(context: Context) {
     private val PREFS_FILENAME = "app.olauncher"
@@ -36,6 +37,10 @@ class Prefs(context: Context) {
     private val WIDGET_ID = "WIDGET_ID"
     private val WIDGET_IDS = "WIDGET_IDS"
     private val WIDGET_PLACEMENT = "WIDGET_PLACEMENT"
+    private val WIDGET_HEIGHTS = "WIDGET_HEIGHTS"
+    private val APP_DRAWER_SORT_BY_USAGE = "APP_DRAWER_SORT_BY_USAGE"
+    private val SWIPE_LEFT_ACTION = "SWIPE_LEFT_ACTION"
+    private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
 
     private val APP_NAME_1 = "APP_NAME_1"
     private val APP_NAME_2 = "APP_NAME_2"
@@ -183,6 +188,25 @@ class Prefs(context: Context) {
         get() = prefs.getInt(WIDGET_PLACEMENT, Constants.WidgetPlacement.ABOVE)
         set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value).apply() }
 
+    var appDrawerSortByUsage: Boolean
+        get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
+        set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value).apply() }
+
+    // -1 means "not set" → fall back to OPEN_APP (backward compatible with existing swipe app prefs)
+    var swipeLeftAction: Int
+        get() = prefs.getInt(SWIPE_LEFT_ACTION, -1)
+        set(value) = prefs.edit { putInt(SWIPE_LEFT_ACTION, value).apply() }
+
+    var swipeRightAction: Int
+        get() = prefs.getInt(SWIPE_RIGHT_ACTION, -1)
+        set(value) = prefs.edit { putInt(SWIPE_RIGHT_ACTION, value).apply() }
+
+    fun getEffectiveSwipeLeftAction(): Int =
+        if (swipeLeftAction == -1) Constants.GestureAction.OPEN_APP else swipeLeftAction
+
+    fun getEffectiveSwipeRightAction(): Int =
+        if (swipeRightAction == -1) Constants.GestureAction.OPEN_APP else swipeRightAction
+
     fun getWidgetIdList(): MutableList<Int> {
         val raw = widgetIds
         if (raw.isBlank()) return mutableListOf()
@@ -191,6 +215,34 @@ class Prefs(context: Context) {
 
     fun setWidgetIdList(ids: List<Int>) {
         widgetIds = ids.joinToString(",")
+    }
+
+    private var widgetHeights: String
+        get() = prefs.getString(WIDGET_HEIGHTS, "").toString()
+        set(value) = prefs.edit { putString(WIDGET_HEIGHTS, value).apply() }
+
+    fun getWidgetHeight(widgetId: Int): Int {
+        val map = parseWidgetHeights()
+        return map[widgetId] ?: 200 // default 200dp
+    }
+
+    fun setWidgetHeight(widgetId: Int, heightDp: Int) {
+        val map = parseWidgetHeights().toMutableMap()
+        map[widgetId] = heightDp
+        widgetHeights = map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    }
+
+    private fun parseWidgetHeights(): Map<Int, Int> {
+        val raw = widgetHeights
+        if (raw.isBlank()) return emptyMap()
+        return raw.split(",").mapNotNull { entry ->
+            val parts = entry.split(":")
+            if (parts.size == 2) {
+                val id = parts[0].trim().toIntOrNull()
+                val h = parts[1].trim().toIntOrNull()
+                if (id != null && h != null) id to h else null
+            } else null
+        }.toMap()
     }
 
     fun migrateWidgetIfNeeded() {
@@ -396,63 +448,74 @@ class Prefs(context: Context) {
         get() = prefs.getString(CALENDAR_APP_CLASS_NAME, "").toString()
         set(value) = prefs.edit { putString(CALENDAR_APP_CLASS_NAME, value).apply() }
 
-    fun getAppName(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_NAME_1, "").toString()
-            2 -> prefs.getString(APP_NAME_2, "").toString()
-            3 -> prefs.getString(APP_NAME_3, "").toString()
-            4 -> prefs.getString(APP_NAME_4, "").toString()
-            5 -> prefs.getString(APP_NAME_5, "").toString()
-            6 -> prefs.getString(APP_NAME_6, "").toString()
-            7 -> prefs.getString(APP_NAME_7, "").toString()
-            8 -> prefs.getString(APP_NAME_8, "").toString()
-            else -> ""
-        }
-    }
+    // Indexed accessors for home app slots (1-8) — same SharedPreferences keys as individual properties
+    private fun nameKeyForSlot(slot: Int) = "APP_NAME_$slot"
+    private fun packageKeyForSlot(slot: Int) = "APP_PACKAGE_$slot"
+    private fun activityKeyForSlot(slot: Int) = "APP_ACTIVITY_CLASS_NAME_$slot"
+    private fun userKeyForSlot(slot: Int) = "APP_USER_$slot"
 
-    fun getAppPackage(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_PACKAGE_1, "").toString()
-            2 -> prefs.getString(APP_PACKAGE_2, "").toString()
-            3 -> prefs.getString(APP_PACKAGE_3, "").toString()
-            4 -> prefs.getString(APP_PACKAGE_4, "").toString()
-            5 -> prefs.getString(APP_PACKAGE_5, "").toString()
-            6 -> prefs.getString(APP_PACKAGE_6, "").toString()
-            7 -> prefs.getString(APP_PACKAGE_7, "").toString()
-            8 -> prefs.getString(APP_PACKAGE_8, "").toString()
-            else -> ""
-        }
-    }
+    fun getHomeAppName(slot: Int): String = prefs.getString(nameKeyForSlot(slot), "").toString()
+    fun setHomeAppName(slot: Int, value: String) = prefs.edit { putString(nameKeyForSlot(slot), value).apply() }
 
-    fun getAppActivityClassName(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_1, "").toString()
-            2 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_2, "").toString()
-            3 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_3, "").toString()
-            4 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_4, "").toString()
-            5 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_5, "").toString()
-            6 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_6, "").toString()
-            7 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_7, "").toString()
-            8 -> prefs.getString(APP_ACTIVITY_CLASS_NAME_8, "").toString()
-            else -> ""
-        }
-    }
+    fun getHomeAppPackage(slot: Int): String = prefs.getString(packageKeyForSlot(slot), "").toString()
+    fun setHomeAppPackage(slot: Int, value: String) = prefs.edit { putString(packageKeyForSlot(slot), value).apply() }
 
-    fun getAppUser(location: Int): String {
-        return when (location) {
-            1 -> prefs.getString(APP_USER_1, "").toString()
-            2 -> prefs.getString(APP_USER_2, "").toString()
-            3 -> prefs.getString(APP_USER_3, "").toString()
-            4 -> prefs.getString(APP_USER_4, "").toString()
-            5 -> prefs.getString(APP_USER_5, "").toString()
-            6 -> prefs.getString(APP_USER_6, "").toString()
-            7 -> prefs.getString(APP_USER_7, "").toString()
-            8 -> prefs.getString(APP_USER_8, "").toString()
-            else -> ""
-        }
-    }
+    fun getHomeAppActivityClassName(slot: Int): String = prefs.getString(activityKeyForSlot(slot), "").toString()
+    fun setHomeAppActivityClassName(slot: Int, value: String?) = prefs.edit { putString(activityKeyForSlot(slot), value).apply() }
+
+    fun getHomeAppUser(slot: Int): String = prefs.getString(userKeyForSlot(slot), "").toString()
+    fun setHomeAppUser(slot: Int, value: String) = prefs.edit { putString(userKeyForSlot(slot), value).apply() }
+
+    fun getAppName(location: Int): String = getHomeAppName(location)
+    fun getAppPackage(location: Int): String = getHomeAppPackage(location)
+    fun getAppActivityClassName(location: Int): String = getHomeAppActivityClassName(location)
+    fun getAppUser(location: Int): String = getHomeAppUser(location)
 
     fun getAppRenameLabel(appPackage: String): String = prefs.getString(appPackage, "").toString()
 
     fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit().putString(appPackage, renameLabel).apply()
+
+    // Keys to exclude from export (device-specific, not transferable)
+    private val exportExcludeKeys = setOf(WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT)
+
+    fun exportToJson(): JSONObject {
+        val json = JSONObject()
+        for ((key, value) in prefs.all) {
+            if (key in exportExcludeKeys) continue
+            when (value) {
+                is Boolean -> json.put(key, value)
+                is Int -> json.put(key, value)
+                is Long -> json.put(key, value)
+                is Float -> json.put(key, value.toDouble())
+                is String -> json.put(key, value)
+                is Set<*> -> {
+                    val arr = org.json.JSONArray()
+                    for (item in value) arr.put(item)
+                    json.put(key, arr)
+                }
+            }
+        }
+        return json
+    }
+
+    fun importFromJson(json: JSONObject) {
+        val editor = prefs.edit()
+        for (key in json.keys()) {
+            if (key in exportExcludeKeys) continue
+            val value = json.get(key)
+            when (value) {
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Double -> editor.putFloat(key, value.toFloat())
+                is String -> editor.putString(key, value)
+                is org.json.JSONArray -> {
+                    val set = mutableSetOf<String>()
+                    for (i in 0 until value.length()) set.add(value.getString(i))
+                    editor.putStringSet(key, set)
+                }
+            }
+        }
+        editor.apply()
+    }
 }

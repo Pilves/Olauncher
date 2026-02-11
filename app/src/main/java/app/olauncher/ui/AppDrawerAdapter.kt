@@ -50,6 +50,7 @@ class AppDrawerAdapter(
     private val myUserHandle = android.os.Process.myUserHandle()
 
     var usageStats: Map<String, Long> = emptyMap()
+    var sortByUsage: Boolean = false
 
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
@@ -86,12 +87,14 @@ class AppDrawerAdapter(
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = charSearch?.startsWith(" ")?.not() ?: true
 
-                val appFilteredList = (if (charSearch.isNullOrBlank()) appsList
+                var appFilteredList = (if (charSearch.isNullOrBlank()) appsList
                 else appsList.filter { app ->
                     appLabelMatches(app.appLabel, charSearch)
-//                }.sortedByDescending {
-//                    charSearch.contentEquals(it.appLabel, true)
                 } as MutableList<AppModel>)
+
+                if (sortByUsage && usageStats.isNotEmpty()) {
+                    appFilteredList = appFilteredList.sortedByDescending { usageStats[it.appPackage] ?: 0L }.toMutableList()
+                }
 
                 val filterResults = FilterResults()
                 filterResults.values = appFilteredList

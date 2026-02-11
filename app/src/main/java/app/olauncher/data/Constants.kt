@@ -37,6 +37,16 @@ object Constants {
         const val NOTIFICATIONS = 2
     }
 
+    object GestureAction {
+        const val OPEN_APP = 0
+        const val OPEN_NOTIFICATIONS = 1
+        const val OPEN_SEARCH = 2
+        const val LOCK_SCREEN = 3
+        const val OPEN_CAMERA = 4
+        const val TOGGLE_FLASHLIGHT = 5
+        const val NONE = 6
+    }
+
     object TextSize {
         const val ONE = 0.6f
         const val TWO = 0.75f
@@ -82,9 +92,6 @@ object Constants {
     const val FLAG_SET_SWIPE_RIGHT_APP = 12
     const val FLAG_SET_CLOCK_APP = 13
     const val FLAG_SET_CALENDAR_APP = 14
-
-    const val REQUEST_CODE_ENABLE_ADMIN = 666
-    const val REQUEST_CODE_LAUNCHER_SELECTOR = 678
 
     const val APPWIDGET_HOST_ID = 1024
 

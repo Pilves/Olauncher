@@ -33,6 +33,7 @@ import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
+import app.olauncher.helper.getColorFromAttr
 import app.olauncher.helper.expandNotificationDrawer
 import app.olauncher.helper.getChangedAppTheme
 import app.olauncher.helper.getUserHandleFromString
@@ -133,15 +134,16 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     override fun onLongClick(view: View): Boolean {
+        val homeAppIds = mapOf(
+            R.id.homeApp1 to 1, R.id.homeApp2 to 2, R.id.homeApp3 to 3, R.id.homeApp4 to 4,
+            R.id.homeApp5 to 5, R.id.homeApp6 to 6, R.id.homeApp7 to 7, R.id.homeApp8 to 8
+        )
+        val slot = homeAppIds[view.id]
+        if (slot != null) {
+            showAppList(slot, prefs.getHomeAppName(slot).isNotEmpty(), true)
+            return true
+        }
         when (view.id) {
-            R.id.homeApp1 -> showAppList(Constants.FLAG_SET_HOME_APP_1, prefs.appName1.isNotEmpty(), true)
-            R.id.homeApp2 -> showAppList(Constants.FLAG_SET_HOME_APP_2, prefs.appName2.isNotEmpty(), true)
-            R.id.homeApp3 -> showAppList(Constants.FLAG_SET_HOME_APP_3, prefs.appName3.isNotEmpty(), true)
-            R.id.homeApp4 -> showAppList(Constants.FLAG_SET_HOME_APP_4, prefs.appName4.isNotEmpty(), true)
-            R.id.homeApp5 -> showAppList(Constants.FLAG_SET_HOME_APP_5, prefs.appName5.isNotEmpty(), true)
-            R.id.homeApp6 -> showAppList(Constants.FLAG_SET_HOME_APP_6, prefs.appName6.isNotEmpty(), true)
-            R.id.homeApp7 -> showAppList(Constants.FLAG_SET_HOME_APP_7, prefs.appName7.isNotEmpty(), true)
-            R.id.homeApp8 -> showAppList(Constants.FLAG_SET_HOME_APP_8, prefs.appName8.isNotEmpty(), true)
             R.id.clock -> {
                 showAppList(Constants.FLAG_SET_CLOCK_APP)
                 prefs.clockAppPackage = ""
@@ -266,61 +268,19 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             populateScreenTime()
 
         val homeAppsNum = prefs.homeAppsNum
-        if (homeAppsNum == 0) return
+        val homeAppViews = listOf(
+            binding.homeApp1, binding.homeApp2, binding.homeApp3, binding.homeApp4,
+            binding.homeApp5, binding.homeApp6, binding.homeApp7, binding.homeApp8
+        )
 
-        binding.homeApp1.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp1, prefs.appName1, prefs.appPackage1, prefs.appUser1)) {
-            prefs.appName1 = ""
-            prefs.appPackage1 = ""
-        }
-        if (homeAppsNum == 1) return
-
-        binding.homeApp2.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp2, prefs.appName2, prefs.appPackage2, prefs.appUser2)) {
-            prefs.appName2 = ""
-            prefs.appPackage2 = ""
-        }
-        if (homeAppsNum == 2) return
-
-        binding.homeApp3.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp3, prefs.appName3, prefs.appPackage3, prefs.appUser3)) {
-            prefs.appName3 = ""
-            prefs.appPackage3 = ""
-        }
-        if (homeAppsNum == 3) return
-
-        binding.homeApp4.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp4, prefs.appName4, prefs.appPackage4, prefs.appUser4)) {
-            prefs.appName4 = ""
-            prefs.appPackage4 = ""
-        }
-        if (homeAppsNum == 4) return
-
-        binding.homeApp5.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp5, prefs.appName5, prefs.appPackage5, prefs.appUser5)) {
-            prefs.appName5 = ""
-            prefs.appPackage5 = ""
-        }
-        if (homeAppsNum == 5) return
-
-        binding.homeApp6.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp6, prefs.appName6, prefs.appPackage6, prefs.appUser6)) {
-            prefs.appName6 = ""
-            prefs.appPackage6 = ""
-        }
-        if (homeAppsNum == 6) return
-
-        binding.homeApp7.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp7, prefs.appName7, prefs.appPackage7, prefs.appUser7)) {
-            prefs.appName7 = ""
-            prefs.appPackage7 = ""
-        }
-        if (homeAppsNum == 7) return
-
-        binding.homeApp8.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp8, prefs.appName8, prefs.appPackage8, prefs.appUser8)) {
-            prefs.appName8 = ""
-            prefs.appPackage8 = ""
+        for (i in 0 until homeAppsNum) {
+            val slot = i + 1
+            val view = homeAppViews[i]
+            view.visibility = View.VISIBLE
+            if (!setHomeAppText(view, prefs.getHomeAppName(slot), prefs.getHomeAppPackage(slot), prefs.getHomeAppUser(slot))) {
+                prefs.setHomeAppName(slot, "")
+                prefs.setHomeAppPackage(slot, "")
+            }
         }
     }
 
@@ -399,26 +359,55 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private fun openSwipeRightApp() {
         if (!prefs.swipeRightEnabled) return
-        if (prefs.appPackageSwipeRight.isNotEmpty())
-            launchApp(
-                prefs.appNameSwipeRight,
-                prefs.appPackageSwipeRight,
-                prefs.appActivityClassNameRight,
-                prefs.appUserSwipeRight
-            )
-        else openDialerApp(requireContext())
+        executeGestureAction(prefs.getEffectiveSwipeRightAction()) {
+            // Fallback for OPEN_APP action
+            if (prefs.appPackageSwipeRight.isNotEmpty())
+                launchApp(
+                    prefs.appNameSwipeRight,
+                    prefs.appPackageSwipeRight,
+                    prefs.appActivityClassNameRight,
+                    prefs.appUserSwipeRight
+                )
+            else openDialerApp(requireContext())
+        }
     }
 
     private fun openSwipeLeftApp() {
         if (!prefs.swipeLeftEnabled) return
-        if (prefs.appPackageSwipeLeft.isNotEmpty())
-            launchApp(
-                prefs.appNameSwipeLeft,
-                prefs.appPackageSwipeLeft,
-                prefs.appActivityClassNameSwipeLeft,
-                prefs.appUserSwipeLeft
-            )
-        else openCameraApp(requireContext())
+        executeGestureAction(prefs.getEffectiveSwipeLeftAction()) {
+            // Fallback for OPEN_APP action
+            if (prefs.appPackageSwipeLeft.isNotEmpty())
+                launchApp(
+                    prefs.appNameSwipeLeft,
+                    prefs.appPackageSwipeLeft,
+                    prefs.appActivityClassNameSwipeLeft,
+                    prefs.appUserSwipeLeft
+                )
+            else openCameraApp(requireContext())
+        }
+    }
+
+    private fun executeGestureAction(action: Int, openAppFallback: () -> Unit) {
+        when (action) {
+            Constants.GestureAction.OPEN_APP -> openAppFallback()
+            Constants.GestureAction.OPEN_NOTIFICATIONS -> expandNotificationDrawer(requireContext())
+            Constants.GestureAction.OPEN_SEARCH -> openSearch(requireContext())
+            Constants.GestureAction.LOCK_SCREEN -> lockPhone()
+            Constants.GestureAction.OPEN_CAMERA -> openCameraApp(requireContext())
+            Constants.GestureAction.TOGGLE_FLASHLIGHT -> toggleFlashlight()
+            Constants.GestureAction.NONE -> { /* do nothing */ }
+        }
+    }
+
+    private fun toggleFlashlight() {
+        try {
+            val cameraManager = requireContext().getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull() ?: return
+            flashlightOn = !flashlightOn
+            cameraManager.setTorchMode(cameraId, flashlightOn)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun lockPhone() {
@@ -594,6 +583,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     // ─── Multi-widget system ───
 
+    private var flashlightOn: Boolean = false
     private var pendingSwapIndex: Int = -1
 
     private fun getActiveContainer(): android.widget.LinearLayout {
@@ -642,16 +632,18 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val container = getActiveContainer()
         val scrollView = getActiveScrollView()
 
-        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
         scrollView.layoutParams = (scrollView.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
             height = android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
         }
+
+        val heightDp = prefs.getWidgetHeight(widgetId)
+        val heightPx = (heightDp * resources.displayMetrics.density).toInt()
 
         val wrapper = FrameLayout(requireContext()).apply {
             tag = widgetId
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                maxHeight / maxOf(prefs.getWidgetIdList().size, 1)
+                heightPx
             )
             clipChildren = true
             clipToPadding = true
@@ -707,13 +699,13 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val count = container.childCount
         if (count == 0) return
 
-        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
-        val perWidget = maxHeight / count
-
+        val density = resources.displayMetrics.density
         for (i in 0 until count) {
             val wrapper = container.getChildAt(i)
+            val widgetId = wrapper.tag as? Int ?: continue
+            val heightDp = prefs.getWidgetHeight(widgetId)
             wrapper.layoutParams = (wrapper.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
-                height = perWidget
+                height = (heightDp * density).toInt()
             }
         }
     }
@@ -730,6 +722,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             pendingSwapIndex = index
             showWidgetPicker { providerInfo -> bindWidget(providerInfo, replaceIndex = index) }
         }
+
+        options.add(getString(R.string.resize_widget))
+        actions.add { showWidgetResizeDialog(widgetId) }
 
         options.add(getString(R.string.remove_widget))
         actions.add { removeWidget(widgetId) }
@@ -756,6 +751,26 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         ids.add(toIndex, id)
         prefs.setWidgetIdList(ids)
         rebuildWidgetContainer()
+    }
+
+    private fun showWidgetResizeDialog(widgetId: Int) {
+        val sizes = arrayOf(
+            getString(R.string.widget_size_small) to 100,
+            getString(R.string.widget_size_medium) to 200,
+            getString(R.string.widget_size_large) to 300
+        )
+        val currentHeight = prefs.getWidgetHeight(widgetId)
+        val currentIndex = sizes.indexOfFirst { it.second == currentHeight }.coerceAtLeast(0)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.resize_widget)
+            .setSingleChoiceItems(sizes.map { it.first }.toTypedArray(), currentIndex) { dialog, which ->
+                prefs.setWidgetHeight(widgetId, sizes[which].second)
+                resizeWidgetWrappers()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
     }
 
     private fun rebuildWidgetContainer() {
@@ -814,40 +829,65 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
 
         val pm = requireContext().packageManager
-        val grouped = installedProviders.groupBy { provider ->
-            try {
-                pm.getApplicationLabel(
-                    pm.getApplicationInfo(provider.provider.packageName, 0)
-                ).toString()
+
+        // Build grouped data: map of appName -> list of (widgetLabel, providerInfo)
+        data class WidgetEntry(val appName: String, val widgetLabel: String, val provider: AppWidgetProviderInfo)
+        val allEntries = installedProviders.map { provider ->
+            val appName = try {
+                pm.getApplicationLabel(pm.getApplicationInfo(provider.provider.packageName, 0)).toString()
             } catch (e: Exception) {
                 provider.provider.packageName
             }
-        }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
+            WidgetEntry(appName, provider.loadLabel(pm), provider)
+        }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.appName })
 
-        val items = mutableListOf<Pair<String, AppWidgetProviderInfo?>>()
-        for ((appName, providers) in grouped) {
-            items.add(Pair(appName, null))
-            for (provider in providers) {
-                items.add(Pair(provider.loadLabel(pm), provider))
+        fun buildItems(query: String): MutableList<Pair<String, AppWidgetProviderInfo?>> {
+            val items = mutableListOf<Pair<String, AppWidgetProviderInfo?>>()
+            val filtered = if (query.isBlank()) allEntries
+            else allEntries.filter {
+                it.appName.contains(query, true) || it.widgetLabel.contains(query, true)
             }
+            var lastApp = ""
+            for (entry in filtered) {
+                if (entry.appName != lastApp) {
+                    items.add(Pair(entry.appName, null))
+                    lastApp = entry.appName
+                }
+                items.add(Pair(entry.widgetLabel, entry.provider))
+            }
+            return items
         }
 
         val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+        val searchField = android.widget.EditText(requireContext()).apply {
+            hint = getString(R.string.search_widgets)
+            setPadding(16.dpToPx(), 12.dpToPx(), 16.dpToPx(), 12.dpToPx())
+            textSize = 16f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+            setHintTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            background = null
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            isSingleLine = true
+        }
         val listView = android.widget.ListView(requireContext())
 
-        val textColor = android.graphics.Color.BLACK
-        val headerColor = android.graphics.Color.DKGRAY
+        val textColor = requireContext().getColorFromAttr(R.attr.primaryColor)
+        val headerColor = textColor
+        var currentItems = buildItems("")
 
-        listView.adapter = object : android.widget.BaseAdapter() {
-            override fun getCount() = items.size
-            override fun getItem(position: Int) = items[position]
+        val adapter = object : android.widget.BaseAdapter() {
+            override fun getCount() = currentItems.size
+            override fun getItem(position: Int) = currentItems[position]
             override fun getItemId(position: Int) = position.toLong()
             override fun getViewTypeCount() = 2
-            override fun getItemViewType(position: Int) = if (items[position].second == null) 0 else 1
-            override fun isEnabled(position: Int) = items[position].second != null
+            override fun getItemViewType(position: Int) = if (currentItems[position].second == null) 0 else 1
+            override fun isEnabled(position: Int) = currentItems[position].second != null
 
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val item = items[position]
+                val item = currentItems[position]
                 val isHeader = item.second == null
                 val textView = (convertView as? TextView) ?: TextView(requireContext())
 
@@ -869,14 +909,30 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 return textView
             }
         }
+        listView.adapter = adapter
+
+        searchField.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                currentItems = buildItems(s?.toString() ?: "")
+                adapter.notifyDataSetChanged()
+            }
+        })
 
         listView.setOnItemClickListener { _, _, position, _ ->
-            val providerInfo = items[position].second ?: return@setOnItemClickListener
+            val providerInfo = currentItems[position].second ?: return@setOnItemClickListener
             dialog.dismiss()
             onSelected(providerInfo)
         }
 
-        dialog.setContentView(listView)
+        container.addView(searchField)
+        container.addView(listView, android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+            1f
+        ))
+        dialog.setContentView(container)
         dialog.show()
     }
 
@@ -900,7 +956,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                         onWidgetBound(mainActivity.pendingWidgetId, mainActivity.pendingWidgetInfo!!, capturedReplaceIndex)
                     } else {
                         mainActivity.appWidgetHost.deleteAppWidgetId(mainActivity.pendingWidgetId)
-                        requireContext().showToast("Widget bind permission denied")
+                        requireContext().showToast(getString(R.string.widget_bind_permission_denied))
                     }
                 }
                 val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
@@ -911,7 +967,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             }
         } catch (e: Exception) {
             android.util.Log.e("HomeFragment", "bindWidget failed", e)
-            requireContext().showToast("Couldn't bind widget: ${e.message}")
+            requireContext().showToast(getString(R.string.couldnt_bind_widget, e.message))
         }
     }
 
@@ -943,7 +999,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             }
         } catch (e: Exception) {
             android.util.Log.e("HomeFragment", "onWidgetBound failed", e)
-            requireContext().showToast("Widget setup failed: ${e.message}")
+            requireContext().showToast(getString(R.string.widget_setup_failed, e.message))
         }
     }
 
@@ -966,7 +1022,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             rebuildWidgetContainer()
         } catch (e: Exception) {
             android.util.Log.e("HomeFragment", "finishWidgetSetup failed", e)
-            requireContext().showToast("Couldn't add widget: ${e.message}")
+            requireContext().showToast(getString(R.string.couldnt_add_widget, e.message))
         }
     }
 

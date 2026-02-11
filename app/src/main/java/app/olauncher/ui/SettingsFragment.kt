@@ -2,9 +2,15 @@ package app.olauncher.ui
 
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
@@ -21,6 +27,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import app.olauncher.BuildConfig
+import app.olauncher.MainActivity
 import app.olauncher.MainViewModel
 import app.olauncher.R
 import app.olauncher.data.Constants
@@ -48,6 +55,19 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var importSettingsLauncher: ActivityResultLauncher<Intent>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        importSettingsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                result.data?.data?.let { uri -> importSettings(uri) }
+            }
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
@@ -68,6 +88,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.homeAppsNum.text = prefs.homeAppsNum.toString()
         populateKeyboardText()
         populateScreenTimeOnOff()
+        populateSortByUsage()
         populateWidgetPlacement()
         populateLockSettings()
         populateWallpaperText()
@@ -94,6 +115,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         when (view.id) {
             R.id.olauncherHiddenApps -> showHiddenApps()
             R.id.screenTimeOnOff -> viewModel.showDialog.postValue(Constants.Dialog.DIGITAL_WELLBEING)
+            R.id.sortByUsage -> toggleSortByUsage()
             R.id.appInfo -> openAppInfo(requireContext(), Process.myUserHandle(), BuildConfig.APPLICATION_ID)
             R.id.setLauncher -> viewModel.resetLauncherLiveData.call()
             R.id.toggleLock -> toggleLockMode()
@@ -140,14 +162,16 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.textSize6 -> updateTextSizeScale(Constants.TextSize.SIX)
             R.id.textSize7 -> updateTextSizeScale(Constants.TextSize.SEVEN)
 
-            R.id.swipeLeftApp -> showAppListIfEnabled(Constants.FLAG_SET_SWIPE_LEFT_APP)
-            R.id.swipeRightApp -> showAppListIfEnabled(Constants.FLAG_SET_SWIPE_RIGHT_APP)
+            R.id.swipeLeftApp -> showSwipeActionPicker(isLeft = true)
+            R.id.swipeRightApp -> showSwipeActionPicker(isLeft = false)
             R.id.swipeDownAction -> binding.swipeDownSelectLayout.visibility = View.VISIBLE
             R.id.notifications -> updateSwipeDownAction(Constants.SwipeDownAction.NOTIFICATIONS)
             R.id.search -> updateSwipeDownAction(Constants.SwipeDownAction.SEARCH)
 
             R.id.widgetPlacement -> toggleWidgetPlacement()
 
+            R.id.exportSettings -> exportSettings()
+            R.id.importSettings -> confirmImportSettings()
             R.id.aboutOlauncher -> requireContext().openUrl(Constants.URL_ABOUT_OLAUNCHER)
             R.id.github -> requireContext().openUrl(Constants.URL_OLAUNCHER_GITHUB)
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
@@ -180,11 +204,14 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.scrollLayout.setOnClickListener(this)
         binding.appInfo.setOnClickListener(this)
         binding.setLauncher.setOnClickListener(this)
+        binding.exportSettings?.setOnClickListener(this)
+        binding.importSettings?.setOnClickListener(this)
         binding.aboutOlauncher.setOnClickListener(this)
         binding.autoShowKeyboard.setOnClickListener(this)
         binding.toggleLock.setOnClickListener(this)
         binding.homeAppsNum.setOnClickListener(this)
         binding.screenTimeOnOff.setOnClickListener(this)
+        binding.sortByUsage?.setOnClickListener(this)
         binding.widgetPlacement?.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
@@ -383,7 +410,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
                     getString(R.string.admin_permission_message)
                 )
-                requireActivity().startActivityForResult(intent, Constants.REQUEST_CODE_ENABLE_ADMIN)
+                (requireActivity() as MainActivity).enableAdminLauncher.launch(intent)
             }
         }
         populateLockSettings()
@@ -505,6 +532,20 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         } else binding.screenTimeLayout.visibility = View.GONE
     }
 
+    private fun populateSortByUsage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && requireContext().appUsagePermissionGranted()) {
+            binding.sortByUsageLayout?.visibility = View.VISIBLE
+            binding.sortByUsage?.text = if (prefs.appDrawerSortByUsage) getString(R.string.on) else getString(R.string.off)
+        } else {
+            binding.sortByUsageLayout?.visibility = View.GONE
+        }
+    }
+
+    private fun toggleSortByUsage() {
+        prefs.appDrawerSortByUsage = !prefs.appDrawerSortByUsage
+        populateSortByUsage()
+    }
+
     private fun toggleWidgetPlacement() {
         prefs.widgetPlacement = if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
             Constants.WidgetPlacement.BELOW
@@ -580,29 +621,118 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun populateSwipeApps() {
-        binding.swipeLeftApp.text = prefs.appNameSwipeLeft
-        binding.swipeRightApp.text = prefs.appNameSwipeRight
+        binding.swipeLeftApp.text = gestureActionLabel(prefs.getEffectiveSwipeLeftAction(), prefs.appNameSwipeLeft)
+        binding.swipeRightApp.text = gestureActionLabel(prefs.getEffectiveSwipeRightAction(), prefs.appNameSwipeRight)
         if (!prefs.swipeLeftEnabled)
             binding.swipeLeftApp.setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
         if (!prefs.swipeRightEnabled)
             binding.swipeRightApp.setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
     }
 
-//    private fun populateDigitalWellbeing() {
-//        binding.digitalWellbeing.isVisible = requireContext().isPackageInstalled(Constants.DIGITAL_WELLBEING_PACKAGE_NAME).not()
-//                && requireContext().isPackageInstalled(Constants.DIGITAL_WELLBEING_SAMSUNG_PACKAGE_NAME).not()
-//                && prefs.hideDigitalWellbeing.not()
-//    }
+    private fun gestureActionLabel(action: Int, appName: String): String {
+        return when (action) {
+            Constants.GestureAction.OPEN_APP -> appName
+            Constants.GestureAction.OPEN_NOTIFICATIONS -> getString(R.string.notifications)
+            Constants.GestureAction.OPEN_SEARCH -> getString(R.string.search)
+            Constants.GestureAction.LOCK_SCREEN -> getString(R.string.lock_screen)
+            Constants.GestureAction.OPEN_CAMERA -> getString(R.string.camera)
+            Constants.GestureAction.TOGGLE_FLASHLIGHT -> getString(R.string.flashlight)
+            Constants.GestureAction.NONE -> getString(R.string.none)
+            else -> appName
+        }
+    }
 
-    private fun showAppListIfEnabled(flag: Int) {
-        if ((flag == Constants.FLAG_SET_SWIPE_LEFT_APP) and !prefs.swipeLeftEnabled) {
+    private fun showSwipeActionPicker(isLeft: Boolean) {
+        if (isLeft && !prefs.swipeLeftEnabled) {
             requireContext().showToast(getString(R.string.long_press_to_enable))
             return
         }
-        if ((flag == Constants.FLAG_SET_SWIPE_RIGHT_APP) and !prefs.swipeRightEnabled) {
+        if (!isLeft && !prefs.swipeRightEnabled) {
             requireContext().showToast(getString(R.string.long_press_to_enable))
             return
         }
+
+        val actions = arrayOf(
+            getString(R.string.open_app) to Constants.GestureAction.OPEN_APP,
+            getString(R.string.notifications) to Constants.GestureAction.OPEN_NOTIFICATIONS,
+            getString(R.string.search) to Constants.GestureAction.OPEN_SEARCH,
+            getString(R.string.lock_screen) to Constants.GestureAction.LOCK_SCREEN,
+            getString(R.string.camera) to Constants.GestureAction.OPEN_CAMERA,
+            getString(R.string.flashlight) to Constants.GestureAction.TOGGLE_FLASHLIGHT,
+            getString(R.string.none) to Constants.GestureAction.NONE,
+        )
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.select_action)
+            .setItems(actions.map { it.first }.toTypedArray()) { _, which ->
+                val selectedAction = actions[which].second
+                if (isLeft) prefs.swipeLeftAction = selectedAction
+                else prefs.swipeRightAction = selectedAction
+
+                if (selectedAction == Constants.GestureAction.OPEN_APP) {
+                    // Show app picker
+                    showAppListForSwipe(if (isLeft) Constants.FLAG_SET_SWIPE_LEFT_APP else Constants.FLAG_SET_SWIPE_RIGHT_APP)
+                } else {
+                    populateSwipeApps()
+                }
+            }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
+    }
+
+    private fun exportSettings() {
+        try {
+            val json = prefs.exportToJson()
+            val jsonString = json.toString(2)
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, "olauncher_settings.json")
+                put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+            }
+
+            val resolver = requireContext().contentResolver
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            if (uri != null) {
+                resolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
+                requireContext().showToast(getString(R.string.settings_exported))
+            }
+        } catch (e: Exception) {
+            requireContext().showToast(getString(R.string.settings_export_failed, e.message))
+        }
+    }
+
+    private fun confirmImportSettings() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.import_settings)
+            .setMessage(R.string.import_settings_confirm)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
+                }
+                importSettingsLauncher.launch(intent)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun importSettings(uri: android.net.Uri) {
+        try {
+            val inputStream = requireContext().contentResolver.openInputStream(uri)
+            val jsonString = inputStream?.bufferedReader()?.use { it.readText() } ?: return
+            val json = org.json.JSONObject(jsonString)
+            prefs.importFromJson(json)
+            requireContext().showToast(getString(R.string.settings_imported))
+            requireActivity().recreate()
+        } catch (e: Exception) {
+            requireContext().showToast(getString(R.string.settings_import_failed, e.message))
+        }
+    }
+
+    private fun showAppListForSwipe(flag: Int) {
         viewModel.getAppList(true)
         findNavController().navigate(
             R.id.action_settingsFragment_to_appListFragment,
