@@ -7,8 +7,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnTouchListener
 import app.olauncher.data.Constants
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -17,12 +18,18 @@ import kotlin.math.abs
 
 internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListener {
     private var longPressOn = false
+    private var longPressJob: Job? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
     private val gestureDetector: GestureDetector
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
         when (motionEvent.action) {
             MotionEvent.ACTION_DOWN -> view.isPressed = true
-            MotionEvent.ACTION_UP -> view.isPressed = false
+            MotionEvent.ACTION_UP -> {
+                view.isPressed = false
+                longPressOn = false
+                longPressJob?.cancel()
+            }
         }
         return gestureDetector.onTouchEvent(motionEvent)
     }
@@ -47,7 +54,8 @@ internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListen
 
         override fun onLongPress(e: MotionEvent) {
             longPressOn = true
-            GlobalScope.launch {
+            longPressJob?.cancel()
+            longPressJob = coroutineScope.launch {
                 delay(Constants.LONG_PRESS_DELAY_MS)
                 withContext(Dispatchers.Main) {
                     if (isActive && longPressOn)

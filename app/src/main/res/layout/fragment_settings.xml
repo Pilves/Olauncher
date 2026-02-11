@@ -13,7 +13,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginVertical="8dp"
-        android:animateLayoutChanges="true"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:fadingEdgeLength="48dp"
@@ -164,7 +163,6 @@
                         android:id="@+id/appsNumSelectLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:orientation="horizontal"
@@ -297,7 +295,6 @@
                         android:id="@+id/dateTimeSelectLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:orientation="horizontal"
@@ -379,7 +376,6 @@
                         android:id="@+id/alignmentSelectLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:fadingEdgeLength="8dp"
@@ -458,7 +454,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:animateLayoutChanges="true"
                     android:clipChildren="false"
                     android:clipToPadding="false">
 
@@ -488,7 +483,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:animateLayoutChanges="true"
                     android:clipChildren="false"
                     android:clipToPadding="false">
 
@@ -517,8 +511,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:animateLayoutChanges="true">
+                    android:layout_marginBottom="4dp">
 
                     <TextView
                         style="@style/TextSmall"
@@ -567,8 +560,7 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:animateLayoutChanges="true">
+                    android:layout_marginTop="12dp">
 
                     <TextView
                         style="@style/TextSmall"
@@ -593,8 +585,7 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:animateLayoutChanges="true">
+                    android:layout_marginTop="12dp">
 
                     <TextView
                         android:id="@+id/dailyWallpaperUrl"
@@ -619,8 +610,7 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:animateLayoutChanges="true">
+                    android:layout_marginTop="16dp">
 
                     <TextView
                         style="@style/TextSmall"
@@ -672,7 +662,6 @@
                         android:id="@+id/appThemeSelectLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:orientation="horizontal"
@@ -757,7 +746,6 @@
                         android:id="@+id/textSizesLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:orientation="horizontal"
@@ -848,7 +836,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="12dp"
                 android:layout_marginTop="12dp"
-                android:animateLayoutChanges="true"
                 android:background="@drawable/rounded_rect_shade_color"
                 android:orientation="vertical"
                 android:padding="12dp">
@@ -957,7 +944,6 @@
                         android:id="@+id/swipeDownSelectLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:animateLayoutChanges="true"
                         android:background="@drawable/rounded_primary_gradient"
                         android:elevation="8dp"
                         android:orientation="horizontal"

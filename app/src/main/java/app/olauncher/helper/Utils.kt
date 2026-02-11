@@ -73,8 +73,8 @@ suspend fun getAppsList(
         val appList: MutableList<AppModel> = mutableListOf()
 
         try {
-            if (!Prefs(context).hiddenAppsUpdated) upgradeHiddenApps(Prefs(context))
-            val hiddenApps = Prefs(context).hiddenApps
+            if (!prefs.hiddenAppsUpdated) upgradeHiddenApps(prefs)
+            val hiddenApps = prefs.hiddenApps
 
             val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
             val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
@@ -178,7 +178,8 @@ fun setPlainWallpaperByTheme(context: Context, appTheme: Int) {
 
 fun setPlainWallpaper(context: Context, color: Int) {
     try {
-        val bitmap = Bitmap.createBitmap(1000, 2000, Bitmap.Config.ARGB_8888)
+        val (width, height) = getScreenDimensions(context)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(context.getColor(color))
         val manager = WallpaperManager.getInstance(context)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -216,16 +217,20 @@ fun openAppInfo(context: Context, userHandle: UserHandle, packageName: String) {
 suspend fun getBitmapFromURL(src: String?): Bitmap? {
     return withContext(Dispatchers.IO) {
         var bitmap: Bitmap? = null
+        var connection: HttpURLConnection? = null
         try {
             val url = URL(src)
-            val connection: HttpURLConnection = url
-                .openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 15_000
             connection.doInput = true
             connection.connect()
             val input: InputStream = connection.inputStream
             bitmap = BitmapFactory.decodeStream(input)
         } catch (e: Exception) {
             e.printStackTrace()
+        } finally {
+            connection?.disconnect()
         }
         bitmap
     }
@@ -298,6 +303,7 @@ fun getScreenDimensions(context: Context): Pair<Int, Int> {
 suspend fun getTodaysWallpaper(wallType: String, firstOpenTime: Long): String {
     return withContext(Dispatchers.IO) {
         var wallpaperUrl: String
+        var connection: HttpURLConnection? = null
         try {
             val key = if (firstOpenTime.isDaySince() < 10)
                 String.format("0_%s", firstOpenTime.isDaySince().toString())
@@ -308,7 +314,9 @@ suspend fun getTodaysWallpaper(wallType: String, firstOpenTime: Long): String {
             }
 
             val url = URL(Constants.URL_WALLPAPERS)
-            val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 15_000
             connection.doInput = true
             connection.connect()
 
@@ -328,6 +336,8 @@ suspend fun getTodaysWallpaper(wallType: String, firstOpenTime: Long): String {
         } catch (e: Exception) {
             wallpaperUrl = getBackupWallpaper(wallType)
             wallpaperUrl
+        } finally {
+            connection?.disconnect()
         }
     }
 }

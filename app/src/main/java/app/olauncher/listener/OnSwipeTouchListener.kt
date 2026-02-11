@@ -7,8 +7,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnTouchListener
 import app.olauncher.data.Constants
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -22,13 +23,15 @@ Source: https://www.tutorialspoint.com/how-to-handle-swipe-gestures-in-kotlin
 
 internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
     private var longPressOn = false
-
-    //    private var doubleTapOn = false
+    private var longPressJob: Job? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
     private val gestureDetector: GestureDetector
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
-        if (motionEvent.action == MotionEvent.ACTION_UP)
+        if (motionEvent.action == MotionEvent.ACTION_UP) {
             longPressOn = false
+            longPressJob?.cancel()
+        }
         return gestureDetector.onTouchEvent(motionEvent)
     }
 
@@ -41,29 +44,19 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
         }
 
         override fun onSingleTapUp(e: MotionEvent): Boolean {
-//            if (doubleTapOn) {
-//                doubleTapOn = false
-//                onTripleClick()
-//            }
             onClick()
             return super.onSingleTapUp(e)
         }
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
-//            doubleTapOn = true
-//            Timer().schedule(Constants.TRIPLE_TAP_DELAY_MS) {
-//                if (doubleTapOn) {
-//                    doubleTapOn = false
-//                    onDoubleClick()
-//                }
-//            }
             onDoubleClick()
             return super.onDoubleTap(e)
         }
 
         override fun onLongPress(e: MotionEvent) {
             longPressOn = true
-            GlobalScope.launch {
+            longPressJob?.cancel()
+            longPressJob = coroutineScope.launch {
                 delay(Constants.LONG_PRESS_DELAY_MS)
                 withContext(Dispatchers.Main) {
                     if (isActive && longPressOn)
@@ -104,7 +97,6 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
     open fun onSwipeDown() {}
     open fun onLongClick() {}
     open fun onDoubleClick() {}
-    open fun onTripleClick() {}
     open fun onClick() {}
 
     init {

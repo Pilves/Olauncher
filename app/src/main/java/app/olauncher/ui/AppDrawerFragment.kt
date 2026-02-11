@@ -38,6 +38,7 @@ class AppDrawerFragment : Fragment() {
 
     private var flag = Constants.FLAG_LAUNCH_APP
     private var canRename = false
+    private var scrollListener: RecyclerView.OnScrollListener? = null
 
     private val viewModel: MainViewModel by activityViewModels()
     private var _binding: FragmentAppDrawerBinding? = null
@@ -181,7 +182,8 @@ class AppDrawerFragment : Fragment() {
 
         binding.recyclerView.layoutManager = linearLayoutManager
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.addOnScrollListener(getRecyclerViewOnScrollListener())
+        scrollListener = getRecyclerViewOnScrollListener()
+        binding.recyclerView.addOnScrollListener(scrollListener!!)
         binding.recyclerView.itemAnimator = null
         if (requireContext().isEinkDisplay().not())
             binding.recyclerView.layoutAnimation =
@@ -216,7 +218,6 @@ class AppDrawerFragment : Fragment() {
             viewModel.appList.observe(viewLifecycleOwner) {
                 it?.let { appModels ->
                     adapter.setAppList(appModels.toMutableList())
-                    adapter.filter.filter(binding.search.query)
                 }
             }
         }
@@ -294,6 +295,8 @@ class AppDrawerFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        scrollListener?.let { binding.recyclerView.removeOnScrollListener(it) }
+        scrollListener = null
         super.onDestroyView()
         _binding = null
     }

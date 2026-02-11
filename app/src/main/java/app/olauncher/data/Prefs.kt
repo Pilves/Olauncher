@@ -96,103 +96,103 @@ class Prefs(context: Context) {
 
     var firstOpen: Boolean
         get() = prefs.getBoolean(FIRST_OPEN, true)
-        set(value) = prefs.edit { putBoolean(FIRST_OPEN, value).apply() }
+        set(value) = prefs.edit { putBoolean(FIRST_OPEN, value) }
 
     var firstOpenTime: Long
         get() = prefs.getLong(FIRST_OPEN_TIME, 0L)
-        set(value) = prefs.edit { putLong(FIRST_OPEN_TIME, value).apply() }
+        set(value) = prefs.edit { putLong(FIRST_OPEN_TIME, value) }
 
     var firstHide: Boolean
         get() = prefs.getBoolean(FIRST_HIDE, true)
-        set(value) = prefs.edit { putBoolean(FIRST_HIDE, value).apply() }
+        set(value) = prefs.edit { putBoolean(FIRST_HIDE, value) }
 
     var lockModeOn: Boolean
         get() = prefs.getBoolean(LOCK_MODE, false)
-        set(value) = prefs.edit { putBoolean(LOCK_MODE, value).apply() }
+        set(value) = prefs.edit { putBoolean(LOCK_MODE, value) }
 
     var autoShowKeyboard: Boolean
         get() = prefs.getBoolean(AUTO_SHOW_KEYBOARD, true)
-        set(value) = prefs.edit { putBoolean(AUTO_SHOW_KEYBOARD, value).apply() }
+        set(value) = prefs.edit { putBoolean(AUTO_SHOW_KEYBOARD, value) }
 
     var keyboardMessageShown: Boolean
         get() = prefs.getBoolean(KEYBOARD_MESSAGE, false)
-        set(value) = prefs.edit { putBoolean(KEYBOARD_MESSAGE, value).apply() }
+        set(value) = prefs.edit { putBoolean(KEYBOARD_MESSAGE, value) }
 
     var dailyWallpaper: Boolean
         get() = prefs.getBoolean(DAILY_WALLPAPER, false)
-        set(value) = prefs.edit { putBoolean(DAILY_WALLPAPER, value).apply() }
+        set(value) = prefs.edit { putBoolean(DAILY_WALLPAPER, value) }
 
     var dailyWallpaperUrl: String
         get() = prefs.getString(DAILY_WALLPAPER_URL, "").toString()
-        set(value) = prefs.edit { putString(DAILY_WALLPAPER_URL, value).apply() }
+        set(value) = prefs.edit { putString(DAILY_WALLPAPER_URL, value) }
 
     var homeAppsNum: Int
         get() = prefs.getInt(HOME_APPS_NUM, 4)
-        set(value) = prefs.edit { putInt(HOME_APPS_NUM, value).apply() }
+        set(value) = prefs.edit { putInt(HOME_APPS_NUM, value) }
 
     var homeAlignment: Int
         get() = prefs.getInt(HOME_ALIGNMENT, Gravity.START)
-        set(value) = prefs.edit { putInt(HOME_ALIGNMENT, value).apply() }
+        set(value) = prefs.edit { putInt(HOME_ALIGNMENT, value) }
 
     var homeBottomAlignment: Boolean
         get() = prefs.getBoolean(HOME_BOTTOM_ALIGNMENT, false)
-        set(value) = prefs.edit { putBoolean(HOME_BOTTOM_ALIGNMENT, value).apply() }
+        set(value) = prefs.edit { putBoolean(HOME_BOTTOM_ALIGNMENT, value) }
 
     var appLabelAlignment: Int
         get() = prefs.getInt(APP_LABEL_ALIGNMENT, Gravity.START)
-        set(value) = prefs.edit { putInt(APP_LABEL_ALIGNMENT, value).apply() }
+        set(value) = prefs.edit { putInt(APP_LABEL_ALIGNMENT, value) }
 
     var showStatusBar: Boolean
         get() = prefs.getBoolean(STATUS_BAR, false)
-        set(value) = prefs.edit { putBoolean(STATUS_BAR, value).apply() }
+        set(value) = prefs.edit { putBoolean(STATUS_BAR, value) }
 
     var dateTimeVisibility: Int
         get() = prefs.getInt(DATE_TIME_VISIBILITY, Constants.DateTime.ON)
-        set(value) = prefs.edit { putInt(DATE_TIME_VISIBILITY, value).apply() }
+        set(value) = prefs.edit { putInt(DATE_TIME_VISIBILITY, value) }
 
     var swipeLeftEnabled: Boolean
         get() = prefs.getBoolean(SWIPE_LEFT_ENABLED, true)
-        set(value) = prefs.edit { putBoolean(SWIPE_LEFT_ENABLED, value).apply() }
+        set(value) = prefs.edit { putBoolean(SWIPE_LEFT_ENABLED, value) }
 
     var swipeRightEnabled: Boolean
         get() = prefs.getBoolean(SWIPE_RIGHT_ENABLED, true)
-        set(value) = prefs.edit { putBoolean(SWIPE_RIGHT_ENABLED, value).apply() }
+        set(value) = prefs.edit { putBoolean(SWIPE_RIGHT_ENABLED, value) }
 
     var appTheme: Int
         get() = prefs.getInt(APP_THEME, AppCompatDelegate.MODE_NIGHT_YES)
-        set(value) = prefs.edit { putInt(APP_THEME, value).apply() }
+        set(value) = prefs.edit { putInt(APP_THEME, value) }
 
     var textSizeScale: Float
         get() = prefs.getFloat(TEXT_SIZE_SCALE, 1.0f)
-        set(value) = prefs.edit { putFloat(TEXT_SIZE_SCALE, value).apply() }
+        set(value) = prefs.edit { putFloat(TEXT_SIZE_SCALE, value) }
 
     var hideSetDefaultLauncher: Boolean
         get() = prefs.getBoolean(HIDE_SET_DEFAULT_LAUNCHER, false)
-        set(value) = prefs.edit { putBoolean(HIDE_SET_DEFAULT_LAUNCHER, value).apply() }
+        set(value) = prefs.edit { putBoolean(HIDE_SET_DEFAULT_LAUNCHER, value) }
 
     var screenTimeLastUpdated: Long
         get() = prefs.getLong(SCREEN_TIME_LAST_UPDATED, 0L)
-        set(value) = prefs.edit { putLong(SCREEN_TIME_LAST_UPDATED, value).apply() }
+        set(value) = prefs.edit { putLong(SCREEN_TIME_LAST_UPDATED, value) }
 
     var launcherRestartTimestamp: Long
         get() = prefs.getLong(LAUNCHER_RESTART_TIMESTAMP, 0L)
-        set(value) = prefs.edit { putLong(LAUNCHER_RESTART_TIMESTAMP, value).apply() }
+        set(value) = prefs.edit { putLong(LAUNCHER_RESTART_TIMESTAMP, value) }
 
     var widgetId: Int
         get() = prefs.getInt(WIDGET_ID, -1)
-        set(value) = prefs.edit { putInt(WIDGET_ID, value).apply() }
+        set(value) = prefs.edit { putInt(WIDGET_ID, value) }
 
     var widgetIds: String
         get() = prefs.getString(WIDGET_IDS, "").toString()
-        set(value) = prefs.edit { putString(WIDGET_IDS, value).apply() }
+        set(value) = prefs.edit { putString(WIDGET_IDS, value) }
 
     var widgetPlacement: Int
         get() = prefs.getInt(WIDGET_PLACEMENT, Constants.WidgetPlacement.ABOVE)
-        set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value).apply() }
+        set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value) }
 
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
-        set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value).apply() }
+        set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value) }
 
     fun getCachedUsageStats(): Map<String, Long> {
         val raw = prefs.getString(CACHED_USAGE_STATS, "").toString()
@@ -209,18 +209,18 @@ class Prefs(context: Context) {
 
     fun setCachedUsageStats(stats: Map<String, Long>) {
         prefs.edit {
-            putString(CACHED_USAGE_STATS, stats.entries.joinToString(",") { "${it.key}=${it.value}" }).apply()
+            putString(CACHED_USAGE_STATS, stats.entries.joinToString(",") { "${it.key}=${it.value}" })
         }
     }
 
     // -1 means "not set" → fall back to OPEN_APP (backward compatible with existing swipe app prefs)
     var swipeLeftAction: Int
         get() = prefs.getInt(SWIPE_LEFT_ACTION, -1)
-        set(value) = prefs.edit { putInt(SWIPE_LEFT_ACTION, value).apply() }
+        set(value) = prefs.edit { putInt(SWIPE_LEFT_ACTION, value) }
 
     var swipeRightAction: Int
         get() = prefs.getInt(SWIPE_RIGHT_ACTION, -1)
-        set(value) = prefs.edit { putInt(SWIPE_RIGHT_ACTION, value).apply() }
+        set(value) = prefs.edit { putInt(SWIPE_RIGHT_ACTION, value) }
 
     fun getEffectiveSwipeLeftAction(): Int =
         if (swipeLeftAction == -1) Constants.GestureAction.OPEN_APP else swipeLeftAction
@@ -240,7 +240,7 @@ class Prefs(context: Context) {
 
     private var widgetHeights: String
         get() = prefs.getString(WIDGET_HEIGHTS, "").toString()
-        set(value) = prefs.edit { putString(WIDGET_HEIGHTS, value).apply() }
+        set(value) = prefs.edit { putString(WIDGET_HEIGHTS, value) }
 
     fun getWidgetHeight(widgetId: Int): Int {
         val map = parseWidgetHeights()
@@ -268,7 +268,7 @@ class Prefs(context: Context) {
 
     private var widgetProviders: String
         get() = prefs.getString(WIDGET_PROVIDERS, "").toString()
-        set(value) = prefs.edit { putString(WIDGET_PROVIDERS, value).apply() }
+        set(value) = prefs.edit { putString(WIDGET_PROVIDERS, value) }
 
     fun getWidgetProvider(widgetId: Int): String? {
         val map = parseWidgetProviders()
@@ -312,199 +312,199 @@ class Prefs(context: Context) {
 
     var hiddenApps: MutableSet<String>
         get() = prefs.getStringSet(HIDDEN_APPS, mutableSetOf()) as MutableSet<String>
-        set(value) = prefs.edit { putStringSet(HIDDEN_APPS, value).apply() }
+        set(value) = prefs.edit { putStringSet(HIDDEN_APPS, value) }
 
     var hiddenAppsUpdated: Boolean
         get() = prefs.getBoolean(HIDDEN_APPS_UPDATED, false)
-        set(value) = prefs.edit { putBoolean(HIDDEN_APPS_UPDATED, value).apply() }
+        set(value) = prefs.edit { putBoolean(HIDDEN_APPS_UPDATED, value) }
 
     var swipeDownAction: Int
         get() = prefs.getInt(SWIPE_DOWN_ACTION, Constants.SwipeDownAction.NOTIFICATIONS)
-        set(value) = prefs.edit { putInt(SWIPE_DOWN_ACTION, value).apply() }
+        set(value) = prefs.edit { putInt(SWIPE_DOWN_ACTION, value) }
 
     var appName1: String
         get() = prefs.getString(APP_NAME_1, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_1, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_1, value) }
 
     var appName2: String
         get() = prefs.getString(APP_NAME_2, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_2, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_2, value) }
 
     var appName3: String
         get() = prefs.getString(APP_NAME_3, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_3, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_3, value) }
 
     var appName4: String
         get() = prefs.getString(APP_NAME_4, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_4, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_4, value) }
 
     var appName5: String
         get() = prefs.getString(APP_NAME_5, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_5, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_5, value) }
 
     var appName6: String
         get() = prefs.getString(APP_NAME_6, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_6, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_6, value) }
 
     var appName7: String
         get() = prefs.getString(APP_NAME_7, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_7, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_7, value) }
 
     var appName8: String
         get() = prefs.getString(APP_NAME_8, "").toString()
-        set(value) = prefs.edit { putString(APP_NAME_8, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_8, value) }
 
     var appPackage1: String
         get() = prefs.getString(APP_PACKAGE_1, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_1, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_1, value) }
 
     var appPackage2: String
         get() = prefs.getString(APP_PACKAGE_2, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_2, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_2, value) }
 
     var appPackage3: String
         get() = prefs.getString(APP_PACKAGE_3, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_3, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_3, value) }
 
     var appPackage4: String
         get() = prefs.getString(APP_PACKAGE_4, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_4, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_4, value) }
 
     var appPackage5: String
         get() = prefs.getString(APP_PACKAGE_5, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_5, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_5, value) }
 
     var appPackage6: String
         get() = prefs.getString(APP_PACKAGE_6, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_6, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_6, value) }
 
     var appPackage7: String
         get() = prefs.getString(APP_PACKAGE_7, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_7, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_7, value) }
 
     var appPackage8: String
         get() = prefs.getString(APP_PACKAGE_8, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_8, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_8, value) }
 
     var appActivityClassName1: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_1, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_1, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_1, value) }
 
     var appActivityClassName2: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_2, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_2, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_2, value) }
 
     var appActivityClassName3: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_3, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_3, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_3, value) }
 
     var appActivityClassName4: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_4, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_4, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_4, value) }
 
     var appActivityClassName5: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_5, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_5, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_5, value) }
 
     var appActivityClassName6: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_6, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_6, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_6, value) }
 
     var appActivityClassName7: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_7, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_7, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_7, value) }
 
     var appActivityClassName8: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_8, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_8, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_8, value) }
 
     var appUser1: String
         get() = prefs.getString(APP_USER_1, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_1, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_1, value) }
 
     var appUser2: String
         get() = prefs.getString(APP_USER_2, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_2, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_2, value) }
 
     var appUser3: String
         get() = prefs.getString(APP_USER_3, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_3, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_3, value) }
 
     var appUser4: String
         get() = prefs.getString(APP_USER_4, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_4, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_4, value) }
 
     var appUser5: String
         get() = prefs.getString(APP_USER_5, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_5, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_5, value) }
 
     var appUser6: String
         get() = prefs.getString(APP_USER_6, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_6, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_6, value) }
 
     var appUser7: String
         get() = prefs.getString(APP_USER_7, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_7, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_7, value) }
 
     var appUser8: String
         get() = prefs.getString(APP_USER_8, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_8, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_8, value) }
 
     var appNameSwipeLeft: String
         get() = prefs.getString(APP_NAME_SWIPE_LEFT, "Camera").toString()
-        set(value) = prefs.edit { putString(APP_NAME_SWIPE_LEFT, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_SWIPE_LEFT, value) }
 
     var appNameSwipeRight: String
         get() = prefs.getString(APP_NAME_SWIPE_RIGHT, "Phone").toString()
-        set(value) = prefs.edit { putString(APP_NAME_SWIPE_RIGHT, value).apply() }
+        set(value) = prefs.edit { putString(APP_NAME_SWIPE_RIGHT, value) }
 
     var appPackageSwipeLeft: String
         get() = prefs.getString(APP_PACKAGE_SWIPE_LEFT, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_LEFT, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_LEFT, value) }
 
     var appActivityClassNameSwipeLeft: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, value) }
 
     var appPackageSwipeRight: String
         get() = prefs.getString(APP_PACKAGE_SWIPE_RIGHT, "").toString()
-        set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_RIGHT, value).apply() }
+        set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_RIGHT, value) }
 
     var appActivityClassNameRight: String?
         get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, "").toString()
-        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, value).apply() }
+        set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, value) }
 
     var appUserSwipeLeft: String
         get() = prefs.getString(APP_USER_SWIPE_LEFT, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_SWIPE_LEFT, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_SWIPE_LEFT, value) }
 
     var appUserSwipeRight: String
         get() = prefs.getString(APP_USER_SWIPE_RIGHT, "").toString()
-        set(value) = prefs.edit { putString(APP_USER_SWIPE_RIGHT, value).apply() }
+        set(value) = prefs.edit { putString(APP_USER_SWIPE_RIGHT, value) }
 
     var clockAppPackage: String
         get() = prefs.getString(CLOCK_APP_PACKAGE, "").toString()
-        set(value) = prefs.edit { putString(CLOCK_APP_PACKAGE, value).apply() }
+        set(value) = prefs.edit { putString(CLOCK_APP_PACKAGE, value) }
 
     var clockAppUser: String
         get() = prefs.getString(CLOCK_APP_USER, "").toString()
-        set(value) = prefs.edit { putString(CLOCK_APP_USER, value).apply() }
+        set(value) = prefs.edit { putString(CLOCK_APP_USER, value) }
 
     var clockAppClassName: String?
         get() = prefs.getString(CLOCK_APP_CLASS_NAME, "").toString()
-        set(value) = prefs.edit { putString(CLOCK_APP_CLASS_NAME, value).apply() }
+        set(value) = prefs.edit { putString(CLOCK_APP_CLASS_NAME, value) }
 
     var calendarAppPackage: String
         get() = prefs.getString(CALENDAR_APP_PACKAGE, "").toString()
-        set(value) = prefs.edit { putString(CALENDAR_APP_PACKAGE, value).apply() }
+        set(value) = prefs.edit { putString(CALENDAR_APP_PACKAGE, value) }
 
     var calendarAppUser: String
         get() = prefs.getString(CALENDAR_APP_USER, "").toString()
-        set(value) = prefs.edit { putString(CALENDAR_APP_USER, value).apply() }
+        set(value) = prefs.edit { putString(CALENDAR_APP_USER, value) }
 
     var calendarAppClassName: String?
         get() = prefs.getString(CALENDAR_APP_CLASS_NAME, "").toString()
-        set(value) = prefs.edit { putString(CALENDAR_APP_CLASS_NAME, value).apply() }
+        set(value) = prefs.edit { putString(CALENDAR_APP_CLASS_NAME, value) }
 
     // Indexed accessors for home app slots (1-8) — same SharedPreferences keys as individual properties
     private fun nameKeyForSlot(slot: Int) = "APP_NAME_$slot"
@@ -513,16 +513,16 @@ class Prefs(context: Context) {
     private fun userKeyForSlot(slot: Int) = "APP_USER_$slot"
 
     fun getHomeAppName(slot: Int): String = prefs.getString(nameKeyForSlot(slot), "").toString()
-    fun setHomeAppName(slot: Int, value: String) = prefs.edit { putString(nameKeyForSlot(slot), value).apply() }
+    fun setHomeAppName(slot: Int, value: String) = prefs.edit { putString(nameKeyForSlot(slot), value) }
 
     fun getHomeAppPackage(slot: Int): String = prefs.getString(packageKeyForSlot(slot), "").toString()
-    fun setHomeAppPackage(slot: Int, value: String) = prefs.edit { putString(packageKeyForSlot(slot), value).apply() }
+    fun setHomeAppPackage(slot: Int, value: String) = prefs.edit { putString(packageKeyForSlot(slot), value) }
 
     fun getHomeAppActivityClassName(slot: Int): String = prefs.getString(activityKeyForSlot(slot), "").toString()
-    fun setHomeAppActivityClassName(slot: Int, value: String?) = prefs.edit { putString(activityKeyForSlot(slot), value).apply() }
+    fun setHomeAppActivityClassName(slot: Int, value: String?) = prefs.edit { putString(activityKeyForSlot(slot), value) }
 
     fun getHomeAppUser(slot: Int): String = prefs.getString(userKeyForSlot(slot), "").toString()
-    fun setHomeAppUser(slot: Int, value: String) = prefs.edit { putString(userKeyForSlot(slot), value).apply() }
+    fun setHomeAppUser(slot: Int, value: String) = prefs.edit { putString(userKeyForSlot(slot), value) }
 
     fun getAppName(location: Int): String = getHomeAppName(location)
     fun getAppPackage(location: Int): String = getHomeAppPackage(location)

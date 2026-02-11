@@ -26,6 +26,7 @@ import app.olauncher.helper.isOlauncherDefault
 import app.olauncher.helper.isPackageInstalled
 import app.olauncher.helper.showToast
 import app.olauncher.helper.usageStats.EventLogWrapper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -147,14 +148,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getAppList(includeHiddenApps: Boolean = false) {
-        viewModelScope.launch {
-            appList.value = getAppsList(appContext, prefs, includeRegularApps = true, includeHiddenApps)
+        viewModelScope.launch(Dispatchers.IO) {
+            appList.postValue(getAppsList(appContext, prefs, includeRegularApps = true, includeHiddenApps))
         }
     }
 
     fun getHiddenApps() {
-        viewModelScope.launch {
-            hiddenApps.value = getAppsList(appContext, prefs, includeRegularApps = false, includeHiddenApps = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            hiddenApps.postValue(getAppsList(appContext, prefs, includeRegularApps = false, includeHiddenApps = true))
         }
     }
 
@@ -193,52 +194,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getTodaysScreenTime() {
         if (prefs.screenTimeLastUpdated.hasBeenMinutes(1).not()) return
 
-        val eventLogWrapper = EventLogWrapper(appContext)
-        // Start of today in millis
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
+        viewModelScope.launch(Dispatchers.IO) {
+            val eventLogWrapper = EventLogWrapper(appContext)
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startTime = calendar.timeInMillis
+            val endTime = System.currentTimeMillis()
 
-        val timeSpent = eventLogWrapper.aggregateSimpleUsageStats(
-            eventLogWrapper.aggregateForegroundStats(
-                eventLogWrapper.getForegroundStatsByTimestamps(startTime, endTime)
+            val timeSpent = eventLogWrapper.aggregateSimpleUsageStats(
+                eventLogWrapper.aggregateForegroundStats(
+                    eventLogWrapper.getForegroundStatsByTimestamps(startTime, endTime)
+                )
             )
-        )
-        val viewTimeSpent = appContext.formattedTimeSpent(timeSpent)
-        screenTimeValue.postValue(viewTimeSpent)
-        prefs.screenTimeLastUpdated = endTime
+            val viewTimeSpent = appContext.formattedTimeSpent(timeSpent)
+            screenTimeValue.postValue(viewTimeSpent)
+            prefs.screenTimeLastUpdated = endTime
+        }
     }
 
     fun getPerAppScreenTime() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
         if (prefs.screenTimeLastUpdated.hasBeenMinutes(1).not()) {
-            // Reuse cached value if available
             if (perAppScreenTime.value != null) return
         }
 
-        val eventLogWrapper = EventLogWrapper(appContext)
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
+        viewModelScope.launch(Dispatchers.IO) {
+            val eventLogWrapper = EventLogWrapper(appContext)
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startTime = calendar.timeInMillis
+            val endTime = System.currentTimeMillis()
 
-        val usageStats = eventLogWrapper.aggregateForegroundStats(
-            eventLogWrapper.getForegroundStatsByTimestamps(startTime, endTime)
-        )
-        val map = mutableMapOf<String, Long>()
-        for (stat in usageStats) {
-            map[stat.applicationId] = (map[stat.applicationId] ?: 0L) + stat.timeUsed
+            val usageStats = eventLogWrapper.aggregateForegroundStats(
+                eventLogWrapper.getForegroundStatsByTimestamps(startTime, endTime)
+            )
+            val map = mutableMapOf<String, Long>()
+            for (stat in usageStats) {
+                map[stat.applicationId] = (map[stat.applicationId] ?: 0L) + stat.timeUsed
+            }
+            perAppScreenTime.postValue(map)
         }
-        perAppScreenTime.postValue(map)
     }
 
     fun setDefaultClockApp() {

@@ -42,6 +42,9 @@ class AppDrawerAdapter(
             override fun areContentsTheSame(oldItem: AppModel, newItem: AppModel): Boolean =
                 oldItem == newItem
         }
+
+        private val DIACRITICAL_REGEX = Regex("\\p{InCombiningDiacriticalMarks}+")
+        private val SEPARATOR_REGEX = Regex("[-_+,. ]")
     }
 
     private var autoLaunch = true
@@ -90,7 +93,7 @@ class AppDrawerAdapter(
                 var appFilteredList = (if (charSearch.isNullOrBlank()) appsList
                 else appsList.filter { app ->
                     appLabelMatches(app.appLabel, charSearch)
-                } as MutableList<AppModel>)
+                }).toMutableList()
 
                 if (sortByUsage && usageStats.isNotEmpty()) {
                     appFilteredList = appFilteredList.sortedByDescending { usageStats[it.appPackage] ?: 0L }.toMutableList()
@@ -130,8 +133,8 @@ class AppDrawerAdapter(
     private fun appLabelMatches(appLabel: String, charSearch: CharSequence): Boolean {
         return (appLabel.contains(charSearch.trim(), true) or
                 Normalizer.normalize(appLabel, Normalizer.Form.NFD)
-                    .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
-                    .replace(Regex("[-_+,. ]"), "")
+                    .replace(DIACRITICAL_REGEX, "")
+                    .replace(SEPARATOR_REGEX, "")
                     .contains(charSearch, true))
     }
 
@@ -154,6 +157,8 @@ class AppDrawerAdapter(
     }
 
     class ViewHolder(private val binding: AdapterAppDrawerBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var currentTextWatcher: TextWatcher? = null
 
         fun bind(
             flag: Int,
@@ -214,9 +219,11 @@ class AppDrawerAdapter(
                     else
                         appTitle.visibility = View.VISIBLE
                 }
-                etAppRename.addTextChangedListener(object : TextWatcher {
+                currentTextWatcher?.let { etAppRename.removeTextChangedListener(it) }
+                val appNameHint = getAppName(etAppRename.context, appModel.appPackage)
+                val watcher = object : TextWatcher {
                     override fun afterTextChanged(s: Editable?) {
-                        etAppRename.hint = getAppName(etAppRename.context, appModel.appPackage)
+                        etAppRename.hint = appNameHint
                     }
 
                     override fun beforeTextChanged(
@@ -235,7 +242,9 @@ class AppDrawerAdapter(
                     ) {
                         etAppRename.hint = ""
                     }
-                })
+                }
+                currentTextWatcher = watcher
+                etAppRename.addTextChangedListener(watcher)
                 etAppRename.setOnEditorActionListener { _, actionCode, _ ->
                     if (actionCode == EditorInfo.IME_ACTION_DONE) {
                         val renameLabel = etAppRename.text.toString().trim()
