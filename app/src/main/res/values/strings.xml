@@ -152,6 +152,8 @@
     <string name="widget_size_small">Small</string>
     <string name="widget_size_medium">Medium</string>
     <string name="widget_size_large">Large</string>
+    <string name="widget_size_extra_large">Extra large</string>
+    <string name="widget_size_full">Full</string>
     <string name="swipe_left_action">Swipe left action</string>
     <string name="swipe_right_action">Swipe right action</string>
     <string name="open_app">Open app</string>

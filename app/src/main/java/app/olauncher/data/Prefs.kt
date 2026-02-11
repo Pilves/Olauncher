@@ -38,6 +38,7 @@ class Prefs(context: Context) {
     private val WIDGET_IDS = "WIDGET_IDS"
     private val WIDGET_PLACEMENT = "WIDGET_PLACEMENT"
     private val WIDGET_HEIGHTS = "WIDGET_HEIGHTS"
+    private val WIDGET_PROVIDERS = "WIDGET_PROVIDERS"
     private val APP_DRAWER_SORT_BY_USAGE = "APP_DRAWER_SORT_BY_USAGE"
     private val SWIPE_LEFT_ACTION = "SWIPE_LEFT_ACTION"
     private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
@@ -241,6 +242,43 @@ class Prefs(context: Context) {
                 val id = parts[0].trim().toIntOrNull()
                 val h = parts[1].trim().toIntOrNull()
                 if (id != null && h != null) id to h else null
+            } else null
+        }.toMap()
+    }
+
+    private var widgetProviders: String
+        get() = prefs.getString(WIDGET_PROVIDERS, "").toString()
+        set(value) = prefs.edit { putString(WIDGET_PROVIDERS, value).apply() }
+
+    fun getWidgetProvider(widgetId: Int): String? {
+        val map = parseWidgetProviders()
+        return map[widgetId]
+    }
+
+    fun setWidgetProvider(widgetId: Int, provider: String) {
+        val map = parseWidgetProviders().toMutableMap()
+        map[widgetId] = provider
+        widgetProviders = map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    }
+
+    fun removeWidgetProvider(widgetId: Int) {
+        val map = parseWidgetProviders().toMutableMap()
+        map.remove(widgetId)
+        widgetProviders = map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    }
+
+    fun getAllWidgetProviders(): Map<Int, String> = parseWidgetProviders()
+
+    private fun parseWidgetProviders(): Map<Int, String> {
+        val raw = widgetProviders
+        if (raw.isBlank()) return emptyMap()
+        return raw.split(",").mapNotNull { entry ->
+            // Format: "id:component/class" — split only on first ':'
+            val sep = entry.indexOf(':')
+            if (sep > 0) {
+                val id = entry.substring(0, sep).trim().toIntOrNull()
+                val comp = entry.substring(sep + 1).trim()
+                if (id != null && comp.isNotBlank()) id to comp else null
             } else null
         }.toMap()
     }
@@ -476,7 +514,7 @@ class Prefs(context: Context) {
     fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit().putString(appPackage, renameLabel).apply()
 
     // Keys to exclude from export (device-specific, not transferable)
-    private val exportExcludeKeys = setOf(WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT)
+    private val exportExcludeKeys = setOf(WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT, WIDGET_PROVIDERS)
 
     fun exportToJson(): JSONObject {
         val json = JSONObject()

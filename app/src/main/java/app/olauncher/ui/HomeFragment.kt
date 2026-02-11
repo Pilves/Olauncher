@@ -607,19 +607,47 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         val mainActivity = requireActivity() as MainActivity
         val validIds = mutableListOf<Int>()
+        val savedProviders = prefs.getAllWidgetProviders()
 
         for (wid in ids) {
             try {
-                val info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+                var info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+                var activeId = wid
+
                 if (info == null) {
+                    // Widget ID invalidated (e.g. after reinstall) — try to re-bind from saved provider
                     mainActivity.appWidgetHost.deleteAppWidgetId(wid)
-                    continue
+                    val providerStr = savedProviders[wid]
+                    if (providerStr != null) {
+                        val component = android.content.ComponentName.unflattenFromString(providerStr)
+                        if (component != null) {
+                            val newId = mainActivity.appWidgetHost.allocateAppWidgetId()
+                            val bound = mainActivity.appWidgetManager.bindAppWidgetIdIfAllowed(newId, component)
+                            if (bound) {
+                                info = mainActivity.appWidgetManager.getAppWidgetInfo(newId)
+                                if (info != null) {
+                                    activeId = newId
+                                    // Migrate height and provider to new ID
+                                    val height = prefs.getWidgetHeight(wid)
+                                    prefs.setWidgetHeight(newId, height)
+                                    prefs.setWidgetProvider(newId, providerStr)
+                                } else {
+                                    mainActivity.appWidgetHost.deleteAppWidgetId(newId)
+                                }
+                            } else {
+                                mainActivity.appWidgetHost.deleteAppWidgetId(newId)
+                            }
+                        }
+                    }
+                    prefs.removeWidgetProvider(wid)
+                    if (info == null) continue
                 }
+
                 val hostView = mainActivity.appWidgetHost.createView(
-                    requireContext().applicationContext, wid, info
+                    requireContext().applicationContext, activeId, info
                 )
-                addWidgetToContainer(hostView, wid)
-                validIds.add(wid)
+                addWidgetToContainer(hostView, activeId)
+                validIds.add(activeId)
             } catch (e: Exception) {
                 android.util.Log.e("HomeFragment", "restoreWidget failed for id=$wid", e)
             }
@@ -707,6 +735,21 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             wrapper.layoutParams = (wrapper.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
                 height = (heightDp * density).toInt()
             }
+            // Notify the widget of its new size so it can re-render
+            wrapper.post {
+                val hostView = (wrapper as? FrameLayout)?.getChildAt(0) as? android.appwidget.AppWidgetHostView
+                    ?: return@post
+                val widthDp = (wrapper.width / density).toInt()
+                if (widthDp > 0 && heightDp > 0) {
+                    val options = Bundle().apply {
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+                    }
+                    hostView.updateAppWidgetSize(options, widthDp, heightDp, widthDp, heightDp)
+                }
+            }
         }
     }
 
@@ -757,7 +800,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val sizes = arrayOf(
             getString(R.string.widget_size_small) to 100,
             getString(R.string.widget_size_medium) to 200,
-            getString(R.string.widget_size_large) to 300
+            getString(R.string.widget_size_large) to 300,
+            getString(R.string.widget_size_extra_large) to 400,
+            getString(R.string.widget_size_full) to 500
         )
         val currentHeight = prefs.getWidgetHeight(widgetId)
         val currentIndex = sizes.indexOfFirst { it.second == currentHeight }.coerceAtLeast(0)
@@ -804,6 +849,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private fun removeWidget(widgetId: Int) {
         val mainActivity = requireActivity() as MainActivity
         mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
+        prefs.removeWidgetProvider(widgetId)
 
         val ids = prefs.getWidgetIdList()
         ids.remove(widgetId)
@@ -1014,12 +1060,14 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 // Swap: remove old widget, insert new one at same position
                 val oldId = ids[replaceIndex]
                 mainActivity.appWidgetHost.deleteAppWidgetId(oldId)
+                prefs.removeWidgetProvider(oldId)
                 ids[replaceIndex] = widgetId
             } else {
                 // Add new
                 ids.add(widgetId)
             }
             prefs.setWidgetIdList(ids)
+            prefs.setWidgetProvider(widgetId, providerInfo.provider.flattenToString())
 
             rebuildWidgetContainer()
         } catch (e: Exception) {
