@@ -1,6 +1,7 @@
 package app.olauncher.helper
 
 import android.app.Activity
+import android.util.Log
 import android.app.AppOpsManager
 import android.app.SearchManager
 import android.app.role.RoleManager
@@ -67,7 +68,7 @@ fun Context.resetDefaultLauncher() {
             PackageManager.DONT_KILL_APP
         )
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Extensions", "Failed to reset default launcher", e)
     }
 }
 
@@ -93,7 +94,7 @@ fun Context.isEinkDisplay(): Boolean {
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         windowManager.defaultDisplay.refreshRate <= Constants.MIN_ANIM_REFRESH_RATE
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Extensions", "Failed to detect e-ink display", e)
         false
     }
 }
@@ -112,7 +113,7 @@ fun Context.searchOnPlayStore(query: String? = null): Boolean {
         )
         true
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Extensions", "Failed to open Play Store search", e)
         false
     }
 }

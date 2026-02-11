@@ -551,7 +551,7 @@ class Prefs(context: Context) {
 
     fun getAppRenameLabel(appPackage: String): String = prefs.getString(appPackage, "").toString()
 
-    fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit().putString(appPackage, renameLabel).apply()
+    fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit { putString(appPackage, renameLabel) }
 
     // Keys to exclude from export (device-specific, not transferable)
     private val exportExcludeKeys = setOf(WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT, WIDGET_PROVIDERS)
@@ -577,23 +577,23 @@ class Prefs(context: Context) {
     }
 
     fun importFromJson(json: JSONObject) {
-        val editor = prefs.edit()
-        for (key in json.keys()) {
-            if (key in exportExcludeKeys) continue
-            val value = json.get(key)
-            when (value) {
-                is Boolean -> editor.putBoolean(key, value)
-                is Int -> editor.putInt(key, value)
-                is Long -> editor.putLong(key, value)
-                is Double -> editor.putFloat(key, value.toFloat())
-                is String -> editor.putString(key, value)
-                is org.json.JSONArray -> {
-                    val set = mutableSetOf<String>()
-                    for (i in 0 until value.length()) set.add(value.getString(i))
-                    editor.putStringSet(key, set)
+        prefs.edit {
+            for (key in json.keys()) {
+                if (key in exportExcludeKeys) continue
+                val value = json.get(key)
+                when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Double -> putFloat(key, value.toFloat())
+                    is String -> putString(key, value)
+                    is org.json.JSONArray -> {
+                        val set = mutableSetOf<String>()
+                        for (i in 0 until value.length()) set.add(value.getString(i))
+                        putStringSet(key, set)
+                    }
                 }
             }
         }
-        editor.apply()
     }
 }

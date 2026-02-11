@@ -65,6 +65,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+    private var screenTouchListener: OnSwipeTouchListener? = null
+    private val viewTouchListeners = mutableListOf<ViewSwipeTouchListener>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -205,7 +207,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private fun initSwipeTouchListener() {
         val context = requireContext()
-        binding.mainLayout.setOnTouchListener(getSwipeGestureListener(context))
+        viewTouchListeners.forEach { it.cleanup() }
+        viewTouchListeners.clear()
+        screenTouchListener = getSwipeGestureListener(context)
+        binding.mainLayout.setOnTouchListener(screenTouchListener)
         binding.homeApp1.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp1))
         binding.homeApp2.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp2))
         binding.homeApp3.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp3))
@@ -495,7 +500,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private fun textOnLongClick(view: View) = onLongClick(view)
 
-    private fun getSwipeGestureListener(context: Context): View.OnTouchListener {
+    private fun getSwipeGestureListener(context: Context): OnSwipeTouchListener {
         return object : OnSwipeTouchListener(context) {
             override fun onSwipeLeft() {
                 super.onSwipeLeft()
@@ -540,8 +545,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
     }
 
-    private fun getViewSwipeTouchListener(context: Context, view: View): View.OnTouchListener {
-        return object : ViewSwipeTouchListener(context, view) {
+    private fun getViewSwipeTouchListener(context: Context, view: View): ViewSwipeTouchListener {
+        val listener = object : ViewSwipeTouchListener(context, view) {
             override fun onSwipeLeft() {
                 super.onSwipeLeft()
                 openSwipeLeftApp()
@@ -572,6 +577,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 textOnClick(view)
             }
         }
+        viewTouchListeners.add(listener)
+        return listener
     }
 
     private fun showHomeLongPressMenu() {
@@ -1194,6 +1201,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     override fun onDestroyView() {
+        screenTouchListener?.cleanup()
+        screenTouchListener = null
+        viewTouchListeners.forEach { it.cleanup() }
+        viewTouchListeners.clear()
         super.onDestroyView()
         _binding = null
     }

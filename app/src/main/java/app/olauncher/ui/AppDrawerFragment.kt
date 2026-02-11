@@ -97,6 +97,7 @@ class AppDrawerFragment : Fragment() {
                 try {
                     adapter.filter.filter(newText) {
                         // Show empty state when search returns no results
+                        if (_binding == null) return@filter
                         if (adapter.itemCount == 0 && newText.isNotBlank()) {
                             binding.appDrawerTip.text = getString(R.string.no_apps_found)
                             binding.appDrawerTip.visibility = View.VISIBLE

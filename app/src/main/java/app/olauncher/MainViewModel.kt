@@ -105,7 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshHome(appCountUpdated: Boolean) {
-        refreshHome.value = appCountUpdated
+        refreshHome.postValue(appCountUpdated)
     }
 
     fun toggleDateTime() {
@@ -247,7 +247,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setDefaultClockApp() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 Constants.CLOCK_APP_PACKAGES.firstOrNull { appContext.isPackageInstalled(it) }?.let { packageName ->
                     appContext.packageManager.getLaunchIntentForPackage(packageName)?.component?.className?.let {
