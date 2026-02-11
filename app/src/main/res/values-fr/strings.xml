@@ -13,12 +13,7 @@
     <string name="black">Noir</string>
     <string name="white">Blanc</string>
     <string name="change_default_launcher">Changer le lanceur par défaut</string>
-    <string name="privacy">Confidentialité</string>
-    <string name="share">Partager</string>
-    <string name="share_now">Partager</string>
-    <string name="rate">Évaluer</string>
-    <string name="rate_now">Évaluer</string>
-    <string name="follow">Suivre</string>
+    <string name="privacy">Confidentialité</string><string name="follow">Suivre</string>
     <string name="email">E-mail</string>
 
     <string name="donate">Donner</string>
@@ -55,31 +50,16 @@
     <string name="dark">Sombre</string>
     <string name="light">Clair</string>
     <string name="welcome_to_olauncher_settings">Bienvenue dans les paramètres !
-        \n\nN\'oubliez pas, si vous avez des questions, notre page À propos a la réponse.</string>
-    <string name="rate_us_message">Hé, trouvez-vous Olauncher utile? Si oui, une note de 5 étoiles est le meilleur moyen de nous soutenir.
-        \n\nMerci, vous ne verrez plus ce message.</string>
-    <string name="share_message">Bonjour, nous avons besoin de votre aide ! L\'année dernière, nous avons franchi le million de téléchargements. Cette année, nous voulons atteindre un million de plus, mais nous ne pouvons pas le faire seuls.
-        \n\nAuriez-vous la gentillesse de partager Olauncher avec vos amis, s\'il vous plaît ? Merci et passez une merveilleuse journée!</string>
-    <string name="keyboard_message">Bonjour, le clavier est le moyen le plus rapide de trouver et de lancer des applications dans Olauncher. Pouvons-nous vous demander de garder cela activé pendant quelques jours de plus, puis de décider? Le choix vous appartient toujours.</string>
+        \n\nN\'oubliez pas, si vous avez des questions, notre page À propos a la réponse.</string><string name="keyboard_message">Bonjour, le clavier est le moyen le plus rapide de trouver et de lancer des applications dans Olauncher. Pouvons-nous vous demander de garder cela activé pendant quelques jours de plus, puis de décider? Le choix vous appartient toujours.</string>
     <string name="digital_wellbeing_message">Si vous souhaitez définir des limites de temps pour certaines applications, la fonctionnalité Digital Wellbeing d\'Android peut vous aider à le faire.
         \n\nVeuillez rechercher Digital Wellbeing dans les paramètres de votre téléphone et l\'activer.</string>
     <string name="app_usage_message">Pour afficher/masquer le temps d\'écran sur l\'écran d\'accueil, autorisez ou refusez l\'autorisation d\'utilisation de l\'application.
-        \n\nRemarque : Aucune donnée d\'utilisation de l\'application n\'est collectée. Tout est traité sur votre appareil.</string>
-    <string name="pro_message">Olauncher a également une version pro appelée Pro Launcher. Elle dispose de fonctionnalités supplémentaires telles que la météo, les widgets, les polices, les dossiers, les fonds d\'écran AMOLED, etc.
-        \n\nC\'est aussi le meilleur moyen de soutenir les développeurs d\'Olauncher. Jetez-y un œil !</string>
-    <string name="wallpaper_message">Olauncher propose de superbes fonds d\'écran nouveaux chaque jour. Donne un nouveau look à ton écran d\'accueil chaque jour, gratuitement!
-        \n\nTu veux essayer?</string>
-    <string name="accessibility_service_description">L\'autorisation d\'accessibilité est requise pour activer le double appui pour verrouiller. Toutes les données acquises par Olauncher via ce service ne quitteront pas votre appareil.</string>
-    <string name="support_olauncher_for_free">Soutenez Olauncher gratuitement en utilisant notre lien d\'affiliation Amazon.</string>
-    <string name="support_olauncher_message">Chaque fois que vous achetez quelque chose en utilisant notre lien, nous recevons une petite commission. Enregistrez le lien et utilisez le chaque fois que vous commandez en ligne. Merci!</string>
-    <string name="open">Ouvrir le lien</string>
+        \n\nRemarque : Aucune donnée d\'utilisation de l\'application n\'est collectée. Tout est traité sur votre appareil.</string><string name="accessibility_service_description">L\'autorisation d\'accessibilité est requise pour activer le double appui pour verrouiller. Toutes les données acquises par Olauncher via ce service ne quitteront pas votre appareil.</string><string name="open">Ouvrir le lien</string>
     <string name="copy">Copier</string>
     <string name="close">Fermer</string>
     <string name="not_now">Plus tard</string>
     <string name="public_roadmap">Feuille de route publique d\'Olauncher</string>
-    <string name="instagram">Instagram</string>
-    <string name="twitter">Twitter</string>
-    <string name="roadmap">Feuille de route</string>
+    <string name="instagram">Instagram</string><string name="roadmap">Feuille de route</string>
     <string name="date">Date</string>
     <string name="date_only">Date uniquement</string>
     <string name="bottom_on">Bas : Activé</string>
@@ -127,21 +107,8 @@
     <string name="no_hidden_apps">Aucune application cachées</string>
     <string name="hidden_apps">Applications cachées</string>
     <string name="adapter_show">Afficher</string>
-    <string name="adapter_hide">Masquer</string>
-    <string name="are_you_using_your_phone_or_is_your_phone_using_you">Utilisez-vous votre téléphone, ou votre téléphone vous utilise-t-il?</string>
-    <string name="about_olauncher">À propos Olauncher</string>
+    <string name="adapter_hide">Masquer</string><string name="about_olauncher">À propos Olauncher</string>
     <string name="learn_more">Apprendre encore plus</string>
-    <string name="screen_time">Temps d\'écran</string>
-    <string name="did_you_know">Saviez-vous?</string>
-    <string name="leave_a_review">Laisser un commentaire</string>
-    <string name="review_message">Olauncher est et sera toujours entièrement gratuit. Il n\'y a pas de publicité. Il ne collecte aucune donnée. Plus important encore, cela vous aide à réduire votre temps d’écran et à vivre une vie numérique plus saine.
-        \n\nNous pensons que passer à un lanceur minimal est une excellente décision. Même si nous sommes évidemment partiaux, nous espérons que vous appréciez l\'expérience. N\'hésitez pas à partager vos idées avec nous!</string>
-    <string name="alignment_changed">Alignement changé ✅</string>
-    <string name="home_screen">Écran d\'accueil</string>
-    <string name="hey">Salut</string>
-    <string name="more_features">Plus de fonctionnalités…</string>
-    <string name="new_year_wish">À une année meilleure que toutes les précédentes. Bonne année !</string>
-    <string name="new_year_wish_1">" Peu importe comment s'est passé le mois de janvier. Tu as encore le reste de l'année pour faire mieux que jamais."</string>
-    <string name="cheers">Santé!</string>
-    <string name="notification_bar">Barre de notifications</string>
+    <string name="screen_time">Temps d\'écran</string><string name="alignment_changed">Alignement changé ✅</string>
+    <string name="home_screen">Écran d\'accueil</string><string name="notification_bar">Barre de notifications</string>
 </resources><!-- French -->

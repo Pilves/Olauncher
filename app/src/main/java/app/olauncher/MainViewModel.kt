@@ -47,7 +47,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val screenTimeValue = MutableLiveData<String>()
 
     val showDialog = SingleLiveEvent<String>()
-    val checkForMessages = SingleLiveEvent<Unit?>()
     val resetLauncherLiveData = SingleLiveEvent<Unit?>()
 
     fun selectedApp(appModel: AppModel, flag: Int) {

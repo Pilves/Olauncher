@@ -58,12 +58,7 @@
     <string name="black">أسود</string>
     <string name="white">أبيض</string>
     <string name="change_default_launcher">تغيير المشغل الافتراضي</string>
-    <string name="privacy">خصوصية</string>
-    <string name="share">شارك</string>
-    <string name="share_now">يشارك اﻵن</string>
-    <string name="rate">قيّم</string>
-    <string name="rate_now">قيّم اﻵن</string>
-    <string name="follow">تابع</string>
+    <string name="privacy">خصوصية</string><string name="follow">تابع</string>
     <string name="email">بريد</string>
     <string name="donate">تبرّع</string>
     <string name="swipe_up_for_apps">1. مرر لأعلى لجميع التطبيقات\n2. اضغط مطوّلًا في أي مكان للإعدادات</string>
@@ -86,31 +81,16 @@
     <string name="system_default">نظام</string>
     <string name="dark">مظلم</string>
     <string name="light">مضيء</string>
-    <string name="welcome_to_olauncher_settings">مرحبًا بك في الإعدادات!\n\nتذكر، إذا كان لديك أي سؤال، فإن صفحة "حول" لدينا تحتوي على الإجابة.</string>
-    <string name="rate_us_message">مرحبًا ، لن ترى هذه الرسالة مرة أخرى.
-        \n\nإذا كنت تحب Olauncher ، فهل يمكنك أن تعطينا تصنيف 5 نجوم؟ يساعدنا ذلك على تحسين تصنيفنا ويجعلنا سعداء. شكرًا لك!</string>
-    <string name="share_message">مرحبا، نحن بحاجة لمساعدتكم! في العام الماضي تجاوزنا مليون عملية تنزيل. نريد هذا العام أن نصل إلى مليون آخرين ولكن لا يمكننا القيام بذلك بمفردنا.
-        \n\nهل تتفضل بمشاركة Olauncher مع أصدقائك، من فضلك؟ شكرا لك، ويوم رائع!</string>
-    <string name="keyboard_message">مرحبًا ، لوحة المفاتيح هي أسرع طريقة للعثور على التطبيقات وتشغيلها في Olauncher. هل يمكننا أن نطلب منك الاحتفاظ بهذا الأمر لبضعة أيام أخرى ثم اتخاذ القرار؟ الاختيار دائما لك.</string>
+    <string name="welcome_to_olauncher_settings">مرحبًا بك في الإعدادات!\n\nتذكر، إذا كان لديك أي سؤال، فإن صفحة "حول" لدينا تحتوي على الإجابة.</string><string name="keyboard_message">مرحبًا ، لوحة المفاتيح هي أسرع طريقة للعثور على التطبيقات وتشغيلها في Olauncher. هل يمكننا أن نطلب منك الاحتفاظ بهذا الأمر لبضعة أيام أخرى ثم اتخاذ القرار؟ الاختيار دائما لك.</string>
     <string name="digital_wellbeing_message">إذا كنت تريد تعيين حدود زمنية لتطبيقات معينة، فيمكن أن تساعدك ميزة الرفاهية الرقمية في Android على القيام بذلك.
         \n\nيرجى البحث عن الرفاهية الرقمية في إعدادات هاتفك وتمكينها.</string>
     <string name="app_usage_message">لعرض/إخفاء وقت استخدام الشاشة على الشاشة الرئيسية، يرجى السماح أو منع إذن استخدام التطبيق.
-        \n\nملاحظة: لا يتم جمع أي بيانات حول استخدام التطبيقات. يتم معالجة كل شيء على جهازك.</string>
-    <string name="pro_message">يحتوي Olauncher أيضًا على إصدار احترافي يسمى Pro Launcher. يحتوي على ميزات إضافية مثل الطقس، والأدوات، والخطوط، والمجلدات، وخلفيات AMOLED، وما إلى ذلك.
-        \n\nإنه أيضًا أفضل طريقة لدعم مطوري Olauncher. تحقق من ذلك!</string>
-    <string name="wallpaper_message">يقدم Olauncher خلفيات جميلة جديدة يوميًا. امنح شاشتك الرئيسية مظهرًا جديدًا كل يوم، مجانًا!
-        \n\nهل ترغب في تجربته؟</string>
-    <string name="accessibility_service_description">إذن الوصول مطلوب لتمكين النقر المزدوج للقفل. أي بيانات حصل عليها Olauncher عبر هذه الخدمة لن تترك جهازك.</string>
-    <string name="support_olauncher_for_free">ادعم Olauncher مجانًا باستخدام رابط الشراكة التابع لشركة Amazon.</string>
-    <string name="support_olauncher_message">في كل مرة تشتري شيئًا باستخدام الرابط الخاص بنا ، نحصل على عمولة صغيرة. يرجى حفظ الرابط واستخدامه في أي وقت تتسوق فيه عبر الإنترنت. شكرًا لك!</string>
-    <string name="open">افتح الرابط</string>
+        \n\nملاحظة: لا يتم جمع أي بيانات حول استخدام التطبيقات. يتم معالجة كل شيء على جهازك.</string><string name="accessibility_service_description">إذن الوصول مطلوب لتمكين النقر المزدوج للقفل. أي بيانات حصل عليها Olauncher عبر هذه الخدمة لن تترك جهازك.</string><string name="open">افتح الرابط</string>
     <string name="copy">ينسخ</string>
     <string name="close">يغلق</string>
     <string name="not_now">ليس الآن</string>
     <string name="public_roadmap">خارطة طريق Olauncher العامة</string>
-    <string name="instagram">انستغرام</string>
-    <string name="twitter">تويتر</string>
-    <string name="roadmap">خريطة الطريق</string>
+    <string name="instagram">انستغرام</string><string name="roadmap">خريطة الطريق</string>
     <string name="date">تاريخ</string>
     <string name="date_only">التاريخ فقط</string>
     <string name="bottom_on">المحاذاة ﻷسفل</string>
@@ -121,21 +101,8 @@
     <string name="unable_to_launch_app">تعذر تشغيل التطبيق</string>
     <string name="search_for_Launcher_or_home_app">ابحث عن Launcher أو Home app</string>
     <string name="swipe_left_app_enabled">التمرير لليسار مفعّل</string>
-    <string name="swipe_right_app_enabled">التمرير لليمين مفعّل</string>
-    <string name="are_you_using_your_phone_or_is_your_phone_using_you">هل تستخدم هاتفك أم أن هاتفك يستخدمك؟</string>
-    <string name="about_olauncher">عن Olauncher</string>
-    <string name="learn_more">تعلم أكثر</string>
-    <string name="did_you_know">هل كنت تعلم؟</string>
-    <string name="leave_a_review">أخبرنا رأيك</string>
-    <string name="review_message">Olauncher هو وسيظل دائمًا مجانيًا تمامًا. ليس لديها إعلانات. لا يجمع أي بيانات. والأهم من ذلك أنه يساعدك على تقليل وقت الشاشة والعيش حياة رقمية أكثر صحة.
-        \n\nنحن نعتقد أن التحول إلى الحد الأدنى من المشغل هو قرار ممتاز. على الرغم من أننا متحيزون بشكل واضح، إلا أننا نأمل أن تستمتع بالتجربة. لا تتردد في مشاركة أفكارك معنا!</string>
-    <string name="screen_time">وقت الشاشة</string>
+    <string name="swipe_right_app_enabled">التمرير لليمين مفعّل</string><string name="about_olauncher">عن Olauncher</string>
+    <string name="learn_more">تعلم أكثر</string><string name="screen_time">وقت الشاشة</string>
     <string name="alignment_changed">تم تغيير المحاذاة ✅</string>
-    <string name="home_screen">الشاشة الرئيسية</string>
-    <string name="hey">مرحبا</string>
-    <string name="more_features">مزايا إضافية…</string>
-    <string name="new_year_wish">إليك عامًا أفضل من كل ما سبقه. سنة جديدة سعيدة!</string>
-    <string name="new_year_wish_1">لا يهم كيف مضى شهر يناير. لا يزال لديك بقية العام لتقدم أداءً أفضل من أي وقت مضى.</string>
-    <string name="cheers">هتافات!</string>
-    <string name="notification_bar">شريط الإشعارات</string>
+    <string name="home_screen">الشاشة الرئيسية</string><string name="notification_bar">شريط الإشعارات</string>
 </resources>

@@ -58,12 +58,7 @@
     <string name="black">Siyah</string>
     <string name="white">Beyaz</string>
     <string name="change_default_launcher">Varsayılan başlatıcıyı değiştir</string>
-    <string name="privacy">Gizlilik</string>
-    <string name="share">Paylaş</string>
-    <string name="share_now">Şimdi paylaş</string>
-    <string name="rate">Değerlendir</string>
-    <string name="rate_now">Şimdi değerlendir</string>
-    <string name="follow">Takip et</string>
+    <string name="privacy">Gizlilik</string><string name="follow">Takip et</string>
     <string name="email">E-posta</string>
 
     <string name="donate">Bağış yap</string>
@@ -88,32 +83,17 @@
     <string name="dark">Koyu</string>
     <string name="light">Açık</string>
     <string name="welcome_to_olauncher_settings">Ayarlar sayfasına hoş geldiniz!
-        \n\nUnutmayın, herhangi bir sorunuz olursa "Hakkında" sayfamıza danışabilirsiniz.</string>
-    <string name="rate_us_message">Merhaba, bu mesajı bir daha görmeyeceksiniz.
-        \n\nOlauncher\'ı beğendiyseniz bize tam puan verir misiniz? Sıralamamızı yükseltmemize yardımcı oluyor ve bizi neşelendiriyor. Teşekkür ederiz!</string>
-    <string name="share_message">Merhaba, yardımınıza ihtiyacımız var! Geçen yıl bir milyon indirmeyi geçtik. Bu yıl bir milyona daha ulaşmak istiyoruz ama bunu tek başımıza yapamayız.
-        \n\nOlauncher\'ı arkadaşlarınızla paylaşma nezaketini gösterir misiniz lütfen? Teşekkür eder, harika bir gün geçirmenizi dileriz!</string>
-    <string name="keyboard_message">Merhaba, klavye, Olauncher\'da uygulamaları bulmanın ve başlatmanın en hızlı yoludur. Birkaç gün daha kullanıp karar vermenizi rica ederiz.
+        \n\nUnutmayın, herhangi bir sorunuz olursa "Hakkında" sayfamıza danışabilirsiniz.</string><string name="keyboard_message">Merhaba, klavye, Olauncher\'da uygulamaları bulmanın ve başlatmanın en hızlı yoludur. Birkaç gün daha kullanıp karar vermenizi rica ederiz.
         \n\nSeçim her zaman sizindir.</string>
     <string name="digital_wellbeing_message">Belirli uygulamalar için zaman sınırları belirlemek istiyorsanız Android\'in Dijital Denge özelliği bunu yapmanıza yardımcı olacaktır.
         \n\nLütfen telefon ayarlarınızda Dijital Denge\'yi arayın ve etkinleştirin.</string>
     <string name="app_usage_message">Ana ekranınızda ekran sürenizi göstermek/gizlemek için lütfen uygulama kullanım iznini onaylayın veya reddedin.
-        \n\nNot: Uygulama kullanım verileri toplanmaz. Her şey cihazınızda işlenir.</string>
-    <string name="pro_message">Olauncher\'ın Pro Launcher adında bir pro versiyonu da var. Hava durumu, widget\'lar, yazı tipleri, klasörler, AMOLED duvar kağıtları gibi ekstra özelliklere sahip.
-        \n\nAyrıca Olauncher geliştiricilerini desteklemenin en iyi yoludur. Mutlaka inceleyin!</string>
-    <string name="wallpaper_message">Olauncher, ana ekranınıza taze bir görünüm kazandırmak için her gün yeni duvar kağıtları sunuyor. Hem de ücretsiz!
-        \n\nDenemek ister misiniz?</string>
-    <string name="accessibility_service_description">Kilitlemek için çift dokunmayı etkinleştirmek için erişilebilirlik izni gereklidir. Olauncher tarafından bu hizmet aracılığıyla elde edilen hiçbir veri cihazınızdan ayrılmayacaktır.</string>
-    <string name="support_olauncher_for_free">Amazon ortaklık bağlantımızı kullanarak Olauncher\'ı ücretsiz olarak destekleyin.</string>
-    <string name="support_olauncher_message">Bağlantımızı kullanarak her bir şey satın aldığınızda, küçük bir komisyon alırız. Lütfen bağlantıyı kaydedin ve çevrimiçi alışveriş yaptığınızda kullanın. Teşekkür ederiz!</string>
-    <string name="open">Linki aç</string>
+        \n\nNot: Uygulama kullanım verileri toplanmaz. Her şey cihazınızda işlenir.</string><string name="accessibility_service_description">Kilitlemek için çift dokunmayı etkinleştirmek için erişilebilirlik izni gereklidir. Olauncher tarafından bu hizmet aracılığıyla elde edilen hiçbir veri cihazınızdan ayrılmayacaktır.</string><string name="open">Linki aç</string>
     <string name="copy">Kopyala</string>
     <string name="close">Kapat</string>
     <string name="not_now">Şimdi değil</string>
     <string name="public_roadmap">Olauncher Yol Çizelgesi</string>
-    <string name="instagram">Instagram</string>
-    <string name="twitter">Twitter</string>
-    <string name="roadmap">Yol Çizelgesi</string>
+    <string name="instagram">Instagram</string><string name="roadmap">Yol Çizelgesi</string>
     <string name="date">Tarih</string>
     <string name="date_only">Sadece tarih</string>
     <string name="bottom_on">Alt: Açık</string>
@@ -126,21 +106,8 @@
     <string name="swipe_left_app_enabled">Sola kaydırma uygulaması etkin</string>
     <string name="swipe_right_app_enabled">Sağa kaydırma uygulaması etkin</string>
     <string name="swipe_left_app_disabled">Sola kaydırma uygulaması devre dışı</string>
-    <string name="swipe_right_app_disabled">Sağa kaydırma uygulaması devre dışı</string>
-    <string name="are_you_using_your_phone_or_is_your_phone_using_you">Sen mi telefonunu, kullanıyorsun yoksa telefon mu seni kullanıyor?</string>
-    <string name="about_olauncher">Olauncher Hakkında</string>
+    <string name="swipe_right_app_disabled">Sağa kaydırma uygulaması devre dışı</string><string name="about_olauncher">Olauncher Hakkında</string>
     <string name="learn_more">Daha fazla bilgi</string>
-    <string name="screen_time">Ekran süresi</string>
-    <string name="did_you_know">Biliyor muydunuz?</string>
-    <string name="leave_a_review">Değerlendirme bırakın</string>
-    <string name="review_message">Olauncher tamamen ücretsizdir ve her zaman ücretsiz olacaktır. Reklam yok, veri toplamaz ve en önemlisi ekran sürenizi azaltmanıza ve daha sağlıklı bir dijital yaşam sürmenize yardımcı olur.
-        \n\nUmarım hoşunuza gider. Düşüncelerinizi mutlaka bizimle paylaşın!</string>
-    <string name="alignment_changed">Hizalama değiştirildi ✅</string>
-    <string name="home_screen">Ana ekran</string>
-    <string name="hey">Merhaba</string>
-    <string name="more_features">Daha fazla özellik…</string>
-    <string name="new_year_wish">Öncekilerin hepsinden daha iyi bir yıl olsun. Mutlu yıllar!</string>
-    <string name="new_year_wish_1">Ocak ayının nasıl geçtiği önemli değil. Her zamankinden daha iyisini yapmak için hala yılın geri kalanı var.</string>
-    <string name="cheers">Şerefe!</string>
-    <string name="notification_bar">Bildirim çubuğu</string>
+    <string name="screen_time">Ekran süresi</string><string name="alignment_changed">Hizalama değiştirildi ✅</string>
+    <string name="home_screen">Ana ekran</string><string name="notification_bar">Bildirim çubuğu</string>
 </resources><!-- Turkish -->
