@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/weatherTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weather Settings"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?attr/primaryColor"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Latitude"
+        android:textSize="14sp"
+        android:textColor="?attr/primaryColorTrans50"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/latitudeInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal|numberSigned"
+        android:textColor="?attr/primaryColor"
+        android:hint="e.g. 40.7128"
+        android:textColorHint="?attr/primaryColorTrans50"
+        android:background="@null"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Longitude"
+        android:textSize="14sp"
+        android:textColor="?attr/primaryColorTrans50"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/longitudeInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal|numberSigned"
+        android:textColor="?attr/primaryColor"
+        android:hint="e.g. -74.0060"
+        android:textColorHint="?attr/primaryColorTrans50"
+        android:background="@null"
+        android:padding="8dp"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/weatherSaveButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="?attr/primaryColor"
+        android:layout_gravity="end"
+        android:padding="12dp" />
+
+</LinearLayout>

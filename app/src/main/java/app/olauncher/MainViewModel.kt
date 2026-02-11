@@ -18,8 +18,13 @@ import androidx.work.WorkManager
 import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
+import app.olauncher.helper.FocusModeManager
+import app.olauncher.helper.HabitStreakManager
+import app.olauncher.helper.ScreenTimeLimitManager
 import app.olauncher.helper.SingleLiveEvent
+import app.olauncher.helper.ThemeScheduleManager
 import app.olauncher.helper.WallpaperWorker
+import app.olauncher.helper.WeatherManager
 import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.getAppsList
 import app.olauncher.helper.hasBeenMinutes
@@ -48,6 +53,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val homeAppAlignment = MutableLiveData<Int>()
     val screenTimeValue = MutableLiveData<String>()
     val perAppScreenTime = MutableLiveData<Map<String, Long>>()
+    val weatherValue = MutableLiveData<String>()
 
     val showDialog = SingleLiveEvent<String>()
     val resetLauncherLiveData = SingleLiveEvent<Unit?>()
@@ -55,10 +61,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectedApp(appModel: AppModel, flag: Int) {
         when (flag) {
             Constants.FLAG_LAUNCH_APP -> {
+                if (!FocusModeManager.isAppAllowed(appContext, appModel.appPackage)) {
+                    appContext.showToast(appContext.getString(R.string.app_blocked_focus))
+                    return
+                }
+                ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
+                HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
                 launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
             }
 
             Constants.FLAG_HIDDEN_APPS -> {
+                if (!FocusModeManager.isAppAllowed(appContext, appModel.appPackage)) {
+                    appContext.showToast(appContext.getString(R.string.app_blocked_focus))
+                    return
+                }
+                ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
+                HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
                 launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
             }
 
@@ -96,6 +114,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.calendarAppPackage = appModel.appPackage
                 prefs.calendarAppUser = appModel.user.toString()
                 prefs.calendarAppClassName = appModel.activityClassName
+            }
+
+            in Constants.FLAG_SET_SWIPE_UP_APP_1..Constants.FLAG_SET_SWIPE_UP_APP_8 -> {
+                val slot = flag - Constants.FLAG_SET_SWIPE_UP_APP_1 + 1
+                app.olauncher.helper.SwipeUpAppManager.setSwipeUpApp(
+                    appContext, slot,
+                    appModel.appLabel, appModel.appPackage,
+                    appModel.activityClassName ?: "", appModel.user.toString()
+                )
+                refreshHome(false)
+            }
+
+            Constants.FLAG_SET_DOUBLE_TAP_APP -> {
+                app.olauncher.helper.DoubleTapActionManager.setApp(
+                    appContext,
+                    appModel.appPackage,
+                    appModel.activityClassName ?: "",
+                    appModel.user.toString()
+                )
             }
         }
     }
@@ -186,6 +223,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         WorkManager.getInstance(appContext).cancelUniqueWork(Constants.WALLPAPER_WORKER_NAME)
         prefs.dailyWallpaperUrl = ""
         prefs.dailyWallpaper = false
+    }
+
+    fun getWeather() {
+        if (!WeatherManager.isEnabled(appContext)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val temp = WeatherManager.fetchWeather(appContext)
+            if (temp != null) {
+                weatherValue.postValue(temp)
+            } else {
+                val cached = WeatherManager.getDisplayString(appContext)
+                if (cached.isNotEmpty()) weatherValue.postValue(cached)
+            }
+        }
+    }
+
+    fun startThemeScheduleWorker() {
+        ThemeScheduleManager.startWorker(appContext)
+    }
+
+    fun cancelThemeScheduleWorker() {
+        ThemeScheduleManager.cancelWorker(appContext)
     }
 
     fun updateHomeAlignment(gravity: Int) {

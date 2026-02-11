@@ -19,6 +19,7 @@ import app.olauncher.R
 import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.databinding.AdapterAppDrawerBinding
+import app.olauncher.helper.HabitStreakManager
 import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
@@ -182,8 +183,15 @@ class AppDrawerAdapter(
                 otherProfileIndicator.isVisible = appModel.user != myUserHandle
 
                 val timeMs = usageStats[appModel.appPackage] ?: 0L
+                val streakDisplay = if (appModel.appPackage.isNotEmpty())
+                    HabitStreakManager.getStreakDisplay(root.context, appModel.appPackage)
+                else null
                 if (timeMs > 0 && appModel.appPackage.isNotEmpty()) {
-                    appUsageTime.text = root.context.formattedTimeSpent(timeMs)
+                    val usageText = root.context.formattedTimeSpent(timeMs)
+                    appUsageTime.text = if (streakDisplay != null) "$usageText · $streakDisplay" else usageText
+                    appUsageTime.visibility = View.VISIBLE
+                } else if (streakDisplay != null) {
+                    appUsageTime.text = streakDisplay
                     appUsageTime.visibility = View.VISIBLE
                 } else {
                     appUsageTime.visibility = View.GONE

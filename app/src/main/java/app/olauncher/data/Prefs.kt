@@ -554,7 +554,12 @@ class Prefs(context: Context) {
     fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit { putString(appPackage, renameLabel) }
 
     // Keys to exclude from export (device-specific, not transferable)
-    private val exportExcludeKeys = setOf(WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT, WIDGET_PROVIDERS)
+    private val exportExcludeKeys = setOf(
+        WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT, WIDGET_PROVIDERS,
+        "WEATHER_CACHED_TEMP", "WEATHER_LAST_FETCHED",
+        "FOCUS_MODE_ENABLED", "FOCUS_MODE_END_TIME",
+        "HABIT_STREAK_DATA"
+    )
 
     fun exportToJson(): JSONObject {
         val json = JSONObject()

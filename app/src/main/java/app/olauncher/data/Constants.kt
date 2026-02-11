@@ -93,6 +93,16 @@ object Constants {
     const val FLAG_SET_CLOCK_APP = 13
     const val FLAG_SET_CALENDAR_APP = 14
 
+    const val FLAG_SET_SWIPE_UP_APP_1 = 21
+    const val FLAG_SET_SWIPE_UP_APP_2 = 22
+    const val FLAG_SET_SWIPE_UP_APP_3 = 23
+    const val FLAG_SET_SWIPE_UP_APP_4 = 24
+    const val FLAG_SET_SWIPE_UP_APP_5 = 25
+    const val FLAG_SET_SWIPE_UP_APP_6 = 26
+    const val FLAG_SET_SWIPE_UP_APP_7 = 27
+    const val FLAG_SET_SWIPE_UP_APP_8 = 28
+    const val FLAG_SET_DOUBLE_TAP_APP = 30
+
     const val APPWIDGET_HOST_ID = 1024
 
     const val LONG_PRESS_DELAY_MS = 500L
@@ -116,4 +126,18 @@ object Constants {
     const val DIGITAL_WELLBEING_SAMSUNG_PACKAGE_NAME = "com.samsung.android.forest"
     const val DIGITAL_WELLBEING_SAMSUNG_ACTIVITY = "com.samsung.android.forest.launcher.LauncherActivity"
     const val WALLPAPER_WORKER_NAME = "WALLPAPER_WORKER_NAME"
+    const val THEME_SCHEDULE_WORKER_NAME = "THEME_SCHEDULE_WORKER"
+
+    object FocusTimer {
+        const val MINUTES_25 = 25
+        const val HOURS_1 = 60
+        const val HOURS_2 = 120
+        const val UNTIL_DISABLED = -1
+    }
+
+    object ThemeScheduleMode {
+        const val MANUAL = 0
+        const val SCHEDULED = 1
+        const val SUNRISE_SUNSET = 2
+    }
 }

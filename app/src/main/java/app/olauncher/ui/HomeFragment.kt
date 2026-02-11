@@ -18,7 +18,6 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
@@ -49,6 +48,18 @@ import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
+import app.olauncher.helper.DoubleTapActionManager
+import app.olauncher.helper.FocusModeManager
+import app.olauncher.helper.FolderManager
+import app.olauncher.helper.GestureLetterManager
+import app.olauncher.helper.GrayscaleManager
+import app.olauncher.helper.HabitStreakManager
+import app.olauncher.helper.QuickNoteManager
+import app.olauncher.helper.ScreenTimeLimitManager
+import app.olauncher.helper.SwipeUpAppManager
+import app.olauncher.helper.WeatherManager
+import app.olauncher.ui.FocusModeDialog
+import app.olauncher.ui.ScreenTimeGraphDialog
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,6 +78,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private val binding get() = _binding!!
     private var screenTouchListener: OnSwipeTouchListener? = null
     private val viewTouchListeners = mutableListOf<ViewSwipeTouchListener>()
+    private lateinit var folderManager: FolderManager
+    private var expandedFolderSlot: Int = -1
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -76,6 +89,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         prefs = Prefs(requireContext())
+        folderManager = FolderManager(requireContext())
         viewModel = activity?.run {
             ViewModelProvider(this)[MainViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
@@ -97,6 +111,12 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         viewModel.isOlauncherDefault()
         if (prefs.showStatusBar) showStatusBar()
         else hideStatusBar()
+        FocusModeManager.checkAndExpire(requireContext())
+        if (GrayscaleManager.isEnabled(requireContext()))
+            GrayscaleManager.apply(binding.root)
+        else
+            GrayscaleManager.remove(binding.root)
+        viewModel.getWeather()
     }
 
     override fun onClick(view: View) {
@@ -203,6 +223,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         viewModel.screenTimeValue.observe(viewLifecycleOwner) {
             it?.let { binding.tvScreenTime.text = it }
         }
+        viewModel.weatherValue.observe(viewLifecycleOwner) {
+            populateDateTime()
+        }
     }
 
     private fun initSwipeTouchListener() {
@@ -252,7 +275,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         binding.date.isVisible = Constants.DateTime.isDateVisible(prefs.dateTimeVisibility)
 
         val formatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())
+        val weatherTemp = WeatherManager.getDisplayString(requireContext())
         var dateText = LocalDate.now().format(formatter)
+        if (weatherTemp.isNotEmpty()) dateText = "$weatherTemp  $dateText"
 
         if (!prefs.showStatusBar) {
             val battery = (requireContext().getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
@@ -291,12 +316,22 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             val slot = i + 1
             val view = homeAppViews[i]
             view.visibility = View.VISIBLE
-            val appName = prefs.getHomeAppName(slot)
-            if (!setHomeAppText(view, appName, prefs.getHomeAppPackage(slot), prefs.getHomeAppUser(slot))) {
-                prefs.setHomeAppName(slot, "")
-                prefs.setHomeAppPackage(slot, "")
+
+            if (folderManager.isFolderSlot(slot)) {
+                val folder = folderManager.getFolderGroup(slot)
+                view.text = folder?.name ?: ""
+                view.contentDescription = folder?.name ?: getString(R.string.long_press_to_select_app)
+            } else if (QuickNoteManager.isNoteSlot(requireContext(), slot)) {
+                view.text = QuickNoteManager.getPreviewText(requireContext())
+                view.contentDescription = getString(R.string.quick_note)
+            } else {
+                val appName = prefs.getHomeAppName(slot)
+                if (!setHomeAppText(view, appName, prefs.getHomeAppPackage(slot), prefs.getHomeAppUser(slot))) {
+                    prefs.setHomeAppName(slot, "")
+                    prefs.setHomeAppPackage(slot, "")
+                }
+                view.contentDescription = appName.ifEmpty { getString(R.string.long_press_to_select_app) }
             }
-            view.contentDescription = appName.ifEmpty { getString(R.string.long_press_to_select_app) }
         }
     }
 
@@ -321,6 +356,14 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun homeAppClicked(location: Int) {
+        if (folderManager.isFolderSlot(location)) {
+            toggleFolderExpansion(location)
+            return
+        }
+        if (QuickNoteManager.isNoteSlot(requireContext(), location)) {
+            showQuickNoteDialog()
+            return
+        }
         if (prefs.getAppName(location).isEmpty()) showLongPressToast()
         else launchApp(
             prefs.getAppName(location),
@@ -473,25 +516,86 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun openScreenTimeDigitalWellbeing() {
-        val intent = Intent()
         try {
-            intent.setClassName(
-                Constants.DIGITAL_WELLBEING_PACKAGE_NAME,
-                Constants.DIGITAL_WELLBEING_ACTIVITY
-            )
-            startActivity(intent)
+            ScreenTimeGraphDialog(requireContext()).show()
         } catch (e: Exception) {
-            Log.e("HomeFragment", "Failed to open Digital Wellbeing", e)
+            Log.e("HomeFragment", "Failed to show screen time graph", e)
+            // Fallback to Digital Wellbeing
+            val intent = Intent()
             try {
                 intent.setClassName(
-                    Constants.DIGITAL_WELLBEING_SAMSUNG_PACKAGE_NAME,
-                    Constants.DIGITAL_WELLBEING_SAMSUNG_ACTIVITY
+                    Constants.DIGITAL_WELLBEING_PACKAGE_NAME,
+                    Constants.DIGITAL_WELLBEING_ACTIVITY
                 )
                 startActivity(intent)
-            } catch (e: Exception) {
-                Log.e("HomeFragment", "Failed to open Samsung Digital Wellbeing", e)
+            } catch (e2: Exception) {
+                Log.e("HomeFragment", "Failed to open Digital Wellbeing", e2)
             }
         }
+    }
+
+    private fun toggleFolderExpansion(slot: Int) {
+        val folder = folderManager.getFolderGroup(slot) ?: return
+        if (folder.apps.isEmpty()) return
+
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        // Drag handle
+        val handle = View(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = 8.dpToPx()
+            }
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        // Folder title
+        val title = TextView(requireContext()).apply {
+            text = folder.name
+            textSize = 14f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
+        }
+        container.addView(title)
+
+        for (app in folder.apps) {
+            val tv = TextView(requireContext()).apply {
+                text = app.appName
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                setOnClickListener {
+                    dialog.dismiss()
+                    launchApp(app.appName, app.packageName, app.activityClassName, app.userString)
+                }
+            }
+            container.addView(tv)
+        }
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun showQuickNoteDialog() {
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext())
+        val view = layoutInflater.inflate(R.layout.dialog_quick_note, null)
+        val editText = view.findViewById<android.widget.EditText>(R.id.noteEditText)
+        val saveButton = view.findViewById<TextView>(R.id.noteSaveButton)
+        editText.setText(QuickNoteManager.getText(requireContext()))
+        saveButton.setOnClickListener {
+            QuickNoteManager.setText(requireContext(), editText.text.toString())
+            populateHomeScreen(false)
+            dialog.dismiss()
+        }
+        dialog.setContentView(view)
+        dialog.show()
     }
 
     private fun showLongPressToast() = requireContext().showToast(getString(R.string.long_press_to_select_app))
@@ -533,10 +637,11 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
             override fun onDoubleClick() {
                 super.onDoubleClick()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                    binding.lock.performClick()
-                else if (prefs.lockModeOn)
-                    lockPhone()
+                DoubleTapActionManager.execute(
+                    requireContext(),
+                    lockPhone = { lockPhone() },
+                    toggleFlashlight = { toggleFlashlight() }
+                )
             }
 
             override fun onClick() {
@@ -559,7 +664,17 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
             override fun onSwipeUp() {
                 super.onSwipeUp()
-                showAppList(Constants.FLAG_LAUNCH_APP)
+                val slot = try { view.tag.toString().toInt() } catch (_: Exception) { 0 }
+                if (slot in 1..8 && SwipeUpAppManager.hasSwipeUpApp(requireContext(), slot)) {
+                    launchApp(
+                        SwipeUpAppManager.getSwipeUpAppName(requireContext(), slot),
+                        SwipeUpAppManager.getSwipeUpAppPackage(requireContext(), slot),
+                        SwipeUpAppManager.getSwipeUpAppActivity(requireContext(), slot),
+                        SwipeUpAppManager.getSwipeUpAppUser(requireContext(), slot)
+                    )
+                } else {
+                    showAppList(Constants.FLAG_LAUNCH_APP)
+                }
             }
 
             override fun onSwipeDown() {
@@ -582,21 +697,45 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun showHomeLongPressMenu() {
-        val options = arrayOf(
-            getString(R.string.add_widget),
-            getString(R.string.settings)
-        )
-        AlertDialog.Builder(requireContext())
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> showWidgetPicker()
-                    1 -> {
-                        findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
-                        viewModel.firstOpen(false)
-                    }
-                }
-            }
-            .show()
+        val dialog = BottomSheetDialog(requireContext())
+        val view = layoutInflater.inflate(R.layout.dialog_home_menu, null)
+        view.findViewById<TextView>(R.id.menuAddWidget).setOnClickListener {
+            dialog.dismiss()
+            showWidgetPicker()
+        }
+        view.findViewById<TextView>(R.id.menuFocusMode).setOnClickListener {
+            dialog.dismiss()
+            showFocusModeDialog()
+        }
+        view.findViewById<TextView>(R.id.menuGrayscale).setOnClickListener {
+            dialog.dismiss()
+            toggleGrayscale()
+        }
+        view.findViewById<TextView>(R.id.menuSettings).setOnClickListener {
+            dialog.dismiss()
+            findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
+            viewModel.firstOpen(false)
+        }
+        dialog.setContentView(view)
+        dialog.show()
+    }
+
+    private fun showFocusModeDialog() {
+        val topApps = viewModel.perAppScreenTime.value?.entries
+            ?.sortedByDescending { it.value }
+            ?.take(10)
+            ?.map { it.key to (requireContext().packageManager.let { pm ->
+                try { pm.getApplicationLabel(pm.getApplicationInfo(it.key, 0)).toString() } catch (_: Exception) { it.key }
+            }) } ?: emptyList()
+        FocusModeDialog(requireContext(), topApps).show()
+    }
+
+    private fun toggleGrayscale() {
+        GrayscaleManager.toggle(requireContext())
+        if (GrayscaleManager.isEnabled(requireContext()))
+            GrayscaleManager.apply(binding.root)
+        else
+            GrayscaleManager.remove(binding.root)
     }
 
     // ─── Multi-widget system ───
@@ -874,35 +1013,34 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val ids = prefs.getWidgetIdList()
         val index = ids.indexOf(widgetId)
 
-        val options = mutableListOf<String>()
-        val actions = mutableListOf<() -> Unit>()
+        val dialog = BottomSheetDialog(requireContext())
+        val view = layoutInflater.inflate(R.layout.dialog_widget_options, null)
+        val container = view.findViewById<android.widget.LinearLayout>(R.id.widgetOptionsContainer)
 
-        options.add(getString(R.string.swap_widget))
-        actions.add {
+        fun addMenuItem(text: String, action: () -> Unit) {
+            val tv = TextView(requireContext()).apply {
+                this.text = text
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                setOnClickListener { dialog.dismiss(); action() }
+            }
+            container.addView(tv)
+        }
+
+        addMenuItem(getString(R.string.swap_widget)) {
             pendingSwapIndex = index
             showWidgetPicker { providerInfo -> bindWidget(providerInfo, replaceIndex = index) }
         }
+        addMenuItem(getString(R.string.resize_widget)) { showWidgetResizeDialog(widgetId) }
+        addMenuItem(getString(R.string.remove_widget)) { removeWidget(widgetId) }
+        if (ids.size > 1 && index > 0)
+            addMenuItem(getString(R.string.move_up)) { moveWidget(index, index - 1) }
+        if (ids.size > 1 && index < ids.size - 1)
+            addMenuItem(getString(R.string.move_down)) { moveWidget(index, index + 1) }
 
-        options.add(getString(R.string.resize_widget))
-        actions.add { showWidgetResizeDialog(widgetId) }
-
-        options.add(getString(R.string.remove_widget))
-        actions.add { removeWidget(widgetId) }
-
-        if (ids.size > 1 && index > 0) {
-            options.add(getString(R.string.move_up))
-            actions.add { moveWidget(index, index - 1) }
-        }
-        if (ids.size > 1 && index < ids.size - 1) {
-            options.add(getString(R.string.move_down))
-            actions.add { moveWidget(index, index + 1) }
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.widget_options)
-            .setItems(options.toTypedArray()) { _, which -> actions[which]() }
-            .setNegativeButton(R.string.not_now, null)
-            .show()
+        dialog.setContentView(view)
+        dialog.show()
     }
 
     private fun moveWidget(fromIndex: Int, toIndex: Int) {
@@ -922,17 +1060,41 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             getString(R.string.widget_size_full) to 500
         )
         val currentHeight = prefs.getWidgetHeight(widgetId)
-        val currentIndex = sizes.indexOfFirst { it.second == currentHeight }.coerceAtLeast(0)
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.resize_widget)
-            .setSingleChoiceItems(sizes.map { it.first }.toTypedArray(), currentIndex) { dialog, which ->
-                prefs.setWidgetHeight(widgetId, sizes[which].second)
-                resizeWidgetWrappers()
-                dialog.dismiss()
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        // Drag handle
+        val handle = View(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = 16.dpToPx()
             }
-            .setNegativeButton(R.string.not_now, null)
-            .show()
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        for ((label, heightVal) in sizes) {
+            val tv = TextView(requireContext()).apply {
+                text = if (heightVal == currentHeight) "$label  \u2713" else label
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                setOnClickListener {
+                    prefs.setWidgetHeight(widgetId, heightVal)
+                    resizeWidgetWrappers()
+                    dialog.dismiss()
+                }
+            }
+            container.addView(tv)
+        }
+
+        dialog.setContentView(container)
+        dialog.show()
     }
 
     private fun rebuildWidgetContainer() {

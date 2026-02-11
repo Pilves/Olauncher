@@ -172,4 +172,94 @@
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
     <string name="no_apps_found">No apps found</string>
+
+    <!-- Folders -->
+    <string name="create_folder" translatable="false">Create folder</string>
+    <string name="folder_name" translatable="false">Folder name</string>
+    <string name="select_apps" translatable="false">Select apps (max 4)</string>
+    <string name="remove_folder" translatable="false">Remove folder</string>
+
+    <!-- Icon Packs -->
+    <string name="show_icons" translatable="false">Show icons</string>
+    <string name="icon_pack" translatable="false">Icon pack</string>
+    <string name="select_icon_pack" translatable="false">Select icon pack</string>
+    <string name="no_icon_packs" translatable="false">No icon packs installed</string>
+    <string name="system_icons" translatable="false">System icons</string>
+
+    <!-- Screen Time Limits -->
+    <string name="screen_time_limits" translatable="false">Screen time limits</string>
+    <string name="set_time_limits" translatable="false">Set time limits</string>
+    <string name="time_limit_reached" translatable="false">Screen time limit reached</string>
+    <string name="minutes_15" translatable="false">15m</string>
+    <string name="minutes_30" translatable="false">30m</string>
+    <string name="hour_1" translatable="false">1h</string>
+    <string name="hours_2" translatable="false">2h</string>
+    <string name="unlimited" translatable="false">Unlimited</string>
+    <string name="screen_time_7_days" translatable="false">Screen Time \u2014 Last 7 Days</string>
+
+    <!-- Swipe Up Apps -->
+    <string name="set_swipe_up_app" translatable="false">Set swipe-up app</string>
+    <string name="swipe_up_app" translatable="false">Swipe-up app</string>
+    <string name="clear_swipe_up" translatable="false">Clear swipe-up app</string>
+
+    <!-- Double Tap -->
+    <string name="double_tap_action" translatable="false">Double tap action</string>
+
+    <!-- Theme Schedule -->
+    <string name="theme_schedule" translatable="false">Theme schedule</string>
+    <string name="manual" translatable="false">Manual</string>
+    <string name="scheduled" translatable="false">Scheduled</string>
+    <string name="sunrise_sunset" translatable="false">Sunrise/Sunset</string>
+    <string name="light_time" translatable="false">Light time</string>
+    <string name="dark_time" translatable="false">Dark time</string>
+
+    <!-- Focus Mode -->
+    <string name="focus_mode" translatable="false">Focus mode</string>
+    <string name="focus_mode_on" translatable="false">Focus mode is ON</string>
+    <string name="focus_mode_off" translatable="false">Focus mode is OFF</string>
+    <string name="focus_remaining" translatable="false">Remaining: %s</string>
+    <string name="enable_focus" translatable="false">Enable</string>
+    <string name="disable_focus" translatable="false">Disable</string>
+    <string name="focus_25_min" translatable="false">25 minutes</string>
+    <string name="focus_1_hour" translatable="false">1 hour</string>
+    <string name="focus_2_hours" translatable="false">2 hours</string>
+    <string name="focus_until_disable" translatable="false">Until I disable</string>
+    <string name="allowed_apps" translatable="false">Allowed apps</string>
+    <string name="app_blocked_focus" translatable="false">Blocked by Focus Mode</string>
+
+    <!-- Quick Note -->
+    <string name="quick_note" translatable="false">Quick note</string>
+    <string name="note" translatable="false">Note</string>
+    <string name="save" translatable="false">Save</string>
+    <string name="write_something" translatable="false">Write something\u2026</string>
+    <string name="quick_note_slot" translatable="false">Quick note slot</string>
+
+    <!-- Weather -->
+    <string name="weather" translatable="false">Weather</string>
+    <string name="weather_settings" translatable="false">Weather settings</string>
+    <string name="latitude" translatable="false">Latitude</string>
+    <string name="longitude" translatable="false">Longitude</string>
+
+    <!-- Habit Streaks -->
+    <string name="habit_tracking" translatable="false">Habit tracking</string>
+    <string name="mark_as_habit" translatable="false">Mark as habit</string>
+    <string name="unmark_habit" translatable="false">Unmark habit</string>
+    <string name="streak_days" translatable="false">%s streak</string>
+
+    <!-- Grayscale -->
+    <string name="grayscale" translatable="false">Grayscale</string>
+
+    <!-- Gesture Letters -->
+    <string name="gesture_letters" translatable="false">Gesture letters</string>
+    <string name="draw_letter_to_launch" translatable="false">Draw a letter to launch an app</string>
+    <string name="assign_app" translatable="false">Assign app</string>
+    <string name="letter_detected" translatable="false">Letter: %s</string>
+    <string name="no_app_for_letter" translatable="false">No app assigned to letter %s</string>
+
+    <!-- Wellbeing section -->
+    <string name="wellbeing" translatable="false">Wellbeing</string>
+
+    <!-- General new -->
+    <string name="configure" translatable="false">Configure</string>
+    <string name="app_options" translatable="false">App options</string>
 </resources>
