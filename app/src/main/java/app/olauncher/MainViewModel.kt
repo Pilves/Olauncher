@@ -19,6 +19,7 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.helper.FocusModeManager
+import app.olauncher.helper.GestureLetterManager
 import app.olauncher.helper.HabitStreakManager
 import app.olauncher.helper.ScreenTimeLimitManager
 import app.olauncher.helper.SingleLiveEvent
@@ -54,6 +55,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val screenTimeValue = MutableLiveData<String>()
     val perAppScreenTime = MutableLiveData<Map<String, Long>>()
     val weatherValue = MutableLiveData<String>()
+
+    var pendingGestureLetter: Char? = null
 
     val showDialog = SingleLiveEvent<String>()
     val resetLauncherLiveData = SingleLiveEvent<Unit?>()
@@ -133,6 +136,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     appModel.activityClassName ?: "",
                     appModel.user.toString()
                 )
+            }
+
+            Constants.FLAG_SET_GESTURE_LETTER_APP -> {
+                pendingGestureLetter?.let { letter ->
+                    GestureLetterManager.setMapping(
+                        appContext, letter,
+                        appModel.appPackage,
+                        appModel.activityClassName ?: "",
+                        appModel.user.toString()
+                    )
+                    pendingGestureLetter = null
+                }
             }
         }
     }

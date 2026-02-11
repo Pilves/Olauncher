@@ -3,7 +3,7 @@
     android:id="@+id/widgetOptionsContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/primaryShadeColor"
+    android:background="?attr/primaryInverseColor"
     android:orientation="vertical"
     android:paddingTop="12dp"
     android:paddingBottom="24dp">

@@ -102,6 +102,7 @@ object Constants {
     const val FLAG_SET_SWIPE_UP_APP_7 = 27
     const val FLAG_SET_SWIPE_UP_APP_8 = 28
     const val FLAG_SET_DOUBLE_TAP_APP = 30
+    const val FLAG_SET_GESTURE_LETTER_APP = 40
 
     const val APPWIDGET_HOST_ID = 1024
 

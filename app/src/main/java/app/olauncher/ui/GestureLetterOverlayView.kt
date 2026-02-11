@@ -55,6 +55,15 @@ class GestureLetterOverlayView @JvmOverloads constructor(
         strokeJoin = Paint.Join.ROUND
     }
 
+    /**
+     * Called externally (e.g. from the swipe listener) to forward touch events
+     * for gesture tracking without consuming them in the view hierarchy.
+     */
+    fun forwardTouchEvent(event: MotionEvent) {
+        if (!isGestureLettersEnabled) return
+        onTouchEvent(event)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!isGestureLettersEnabled) return false
 
@@ -99,8 +108,9 @@ class GestureLetterOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 if (!isTracking) return false
                 isTracking = false
+                val wasExceeded = hasExceededThreshold
 
-                if (hasExceededThreshold) {
+                if (wasExceeded) {
                     points.add(PointF(event.x, event.y))
                     val letter = analyzeGesture(points)
                     if (letter != null) {
@@ -112,7 +122,7 @@ class GestureLetterOverlayView @JvmOverloads constructor(
                 drawPath.reset()
                 hasExceededThreshold = false
                 invalidate()
-                return hasExceededThreshold
+                return wasExceeded
             }
 
             MotionEvent.ACTION_CANCEL -> {

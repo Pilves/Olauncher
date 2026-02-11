@@ -20,6 +20,8 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.databinding.AdapterAppDrawerBinding
 import app.olauncher.helper.HabitStreakManager
+import app.olauncher.helper.IconPackManager
+import app.olauncher.helper.dpToPx
 import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
@@ -56,6 +58,8 @@ class AppDrawerAdapter(
 
     var usageStats: Map<String, Long> = emptyMap()
     var sortByUsage: Boolean = false
+    var showIcons: Boolean = false
+    var iconPackPackage: String = ""
 
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
@@ -77,7 +81,9 @@ class AppDrawerAdapter(
                 appInfoListener,
                 appHideListener,
                 appRenameListener,
-                usageStats
+                usageStats,
+                showIcons,
+                iconPackPackage
             )
         } catch (e: Exception) {
             Log.e("AppDrawerAdapter", "Error binding view holder", e)
@@ -173,6 +179,8 @@ class AppDrawerAdapter(
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
             usageStats: Map<String, Long> = emptyMap(),
+            showIcons: Boolean = false,
+            iconPackPackage: String = "",
         ) =
             with(binding) {
                 appHideLayout.visibility = View.GONE
@@ -181,6 +189,22 @@ class AppDrawerAdapter(
                 appTitle.text = appModel.appLabel + if (appModel.isNew == true) " ✦" else ""
                 appTitle.gravity = appLabelGravity
                 otherProfileIndicator.isVisible = appModel.user != myUserHandle
+
+                // Show app icon if enabled
+                if (showIcons && appModel.appPackage.isNotEmpty()) {
+                    val iconSize = 20.dpToPx()
+                    val icon = if (iconPackPackage.isNotEmpty()) {
+                        IconPackManager.getIconForApp(root.context, iconPackPackage, appModel.appPackage, appModel.activityClassName)
+                    } else null
+                    val drawable = icon ?: try {
+                        root.context.packageManager.getApplicationIcon(appModel.appPackage)
+                    } catch (_: Exception) { null }
+                    drawable?.setBounds(0, 0, iconSize, iconSize)
+                    appTitle.setCompoundDrawablesRelative(drawable, null, null, null)
+                    appTitle.compoundDrawablePadding = 8.dpToPx()
+                } else {
+                    appTitle.setCompoundDrawablesRelative(null, null, null, null)
+                }
 
                 val timeMs = usageStats[appModel.appPackage] ?: 0L
                 val streakDisplay = if (appModel.appPackage.isNotEmpty())

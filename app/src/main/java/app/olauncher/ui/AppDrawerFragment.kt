@@ -174,6 +174,8 @@ class AppDrawerFragment : Fragment() {
                 viewModel.getAppList()
             }
         )
+        adapter.showIcons = prefs.showIcons
+        adapter.iconPackPackage = prefs.iconPackPackage
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {
             override fun scrollVerticallyBy(

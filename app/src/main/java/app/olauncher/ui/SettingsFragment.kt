@@ -38,6 +38,7 @@ import app.olauncher.databinding.FragmentSettingsBinding
 import app.olauncher.helper.DoubleTapActionManager
 import app.olauncher.helper.FocusModeManager
 import app.olauncher.helper.GestureLetterManager
+import app.olauncher.helper.IconPackManager
 import app.olauncher.helper.GrayscaleManager
 import app.olauncher.helper.ThemeScheduleManager
 import app.olauncher.helper.WeatherManager
@@ -99,6 +100,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         populateScreenTimeOnOff()
         populateSortByUsage()
         populateWidgetPlacement()
+        populateShowIcons()
         populateLockSettings()
         populateWallpaperText()
         populateAppThemeText()
@@ -128,7 +130,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.sortByUsage -> toggleSortByUsage()
             R.id.appInfo -> openAppInfo(requireContext(), Process.myUserHandle(), BuildConfig.APPLICATION_ID)
             R.id.setLauncher -> viewModel.resetLauncherLiveData.call()
-            R.id.toggleLock -> toggleLockMode()
+            R.id.toggleLock -> showDoubleTapActionPicker()
             R.id.autoShowKeyboard -> toggleKeyboardText()
             R.id.homeAppsNum -> binding.appsNumSelectLayout.visibility = View.VISIBLE
             R.id.dailyWallpaperUrl -> requireContext().openUrl(prefs.dailyWallpaperUrl)
@@ -179,28 +181,26 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.search -> updateSwipeDownAction(Constants.SwipeDownAction.SEARCH)
 
             R.id.widgetPlacement -> toggleWidgetPlacement()
+            R.id.showIconsToggle -> toggleShowIcons()
 
             R.id.exportSettings -> exportSettings()
             R.id.importSettings -> confirmImportSettings()
             R.id.aboutOlauncher -> requireContext().openUrl(Constants.URL_ABOUT_OLAUNCHER)
             R.id.github -> requireContext().openUrl(Constants.URL_OLAUNCHER_GITHUB)
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
-            R.id.focusModeToggle -> {
-                if (FocusModeManager.isActive(requireContext())) {
-                    FocusModeManager.disable(requireContext())
-                } else {
-                    FocusModeManager.enable(requireContext(), Constants.FocusTimer.MINUTES_25)
-                }
-                populateWellbeingSection()
-            }
+            R.id.focusModeToggle -> showFocusModeFromSettings()
             R.id.grayscaleToggle -> {
                 GrayscaleManager.toggle(requireContext())
                 populateWellbeingSection()
             }
             R.id.doubleTapAction -> showDoubleTapActionPicker()
             R.id.gestureLettersToggle -> {
-                GestureLetterManager.setEnabled(requireContext(), !GestureLetterManager.isEnabled(requireContext()))
-                populateWellbeingSection()
+                if (GestureLetterManager.isEnabled(requireContext())) {
+                    showGestureLetterConfigDialog()
+                } else {
+                    GestureLetterManager.setEnabled(requireContext(), true)
+                    populateWellbeingSection()
+                }
             }
             R.id.weatherToggle -> {
                 if (WeatherManager.isEnabled(requireContext())) {
@@ -279,6 +279,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.screenTimeOnOff.setOnClickListener(this)
         binding.sortByUsage?.setOnClickListener(this)
         binding.widgetPlacement?.setOnClickListener(this)
+        binding.showIconsToggle?.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
         binding.alignment.setOnClickListener(this)
@@ -635,6 +636,92 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             getString(R.string.below_apps)
     }
 
+    private fun toggleShowIcons() {
+        if (!prefs.showIcons) {
+            // Turning on - check for icon packs
+            val packs = IconPackManager.getAvailableIconPacks(requireContext())
+            if (packs.isEmpty()) {
+                prefs.showIcons = true
+                prefs.iconPackPackage = ""
+            } else {
+                showIconPackPicker(packs)
+                return
+            }
+        } else {
+            prefs.showIcons = false
+            prefs.iconPackPackage = ""
+        }
+        populateShowIcons()
+        viewModel.refreshHome(false)
+    }
+
+    private fun showIconPackPicker(packs: List<Pair<String, String>>) {
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        val handle = android.view.View(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                bottomMargin = 8.dpToPx()
+            }
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        val title = android.widget.TextView(requireContext()).apply {
+            text = getString(R.string.select_icon_pack)
+            textSize = 14f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
+        }
+        container.addView(title)
+
+        // System icons option
+        val systemOption = android.widget.TextView(requireContext()).apply {
+            text = getString(R.string.system_icons)
+            textSize = 16f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+            setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+            setOnClickListener {
+                dialog.dismiss()
+                prefs.showIcons = true
+                prefs.iconPackPackage = ""
+                populateShowIcons()
+                viewModel.refreshHome(false)
+            }
+        }
+        container.addView(systemOption)
+
+        for ((pkg, label) in packs) {
+            val tv = android.widget.TextView(requireContext()).apply {
+                text = label
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                setOnClickListener {
+                    dialog.dismiss()
+                    prefs.showIcons = true
+                    prefs.iconPackPackage = pkg
+                    populateShowIcons()
+                    viewModel.refreshHome(false)
+                }
+            }
+            container.addView(tv)
+        }
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun populateShowIcons() {
+        binding.showIconsToggle?.text = if (prefs.showIcons) getString(R.string.on) else getString(R.string.off)
+    }
+
     private fun populateKeyboardText() {
         if (prefs.autoShowKeyboard) binding.autoShowKeyboard.text = getString(R.string.on)
         else binding.autoShowKeyboard.text = getString(R.string.off)
@@ -738,7 +825,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 
@@ -798,7 +885,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 
@@ -832,7 +919,13 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                     if (actionValue == Constants.GestureAction.OPEN_APP) {
                         showAppListForSwipe(Constants.FLAG_SET_DOUBLE_TAP_APP)
                     }
+                    if (actionValue == Constants.GestureAction.LOCK_SCREEN) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !isAccessServiceEnabled(requireContext())) {
+                            toggleAccessibilityVisibility(true)
+                        }
+                    }
                     populateWellbeingSection()
+                    populateLockSettings()
                 }
             }
             container.addView(tv)
@@ -875,7 +968,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 
@@ -921,6 +1014,109 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         dialog.show()
     }
 
+    private fun showGestureLetterConfigDialog() {
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        val handle = android.view.View(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                bottomMargin = 8.dpToPx()
+            }
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        val title = android.widget.TextView(requireContext()).apply {
+            text = getString(R.string.gesture_letters)
+            textSize = 14f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
+        }
+        container.addView(title)
+
+        val allMappings = GestureLetterManager.getAllMappings(requireContext())
+        for (letter in GestureLetterManager.getSupportedLetters()) {
+            val mapping = allMappings[letter]
+            val appLabel = if (mapping != null) {
+                try {
+                    val pm = requireContext().packageManager
+                    pm.getApplicationLabel(pm.getApplicationInfo(mapping.first, 0)).toString()
+                } catch (_: Exception) { mapping.first }
+            } else null
+
+            val row = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+            }
+
+            val letterTv = android.widget.TextView(requireContext()).apply {
+                text = if (appLabel != null) "$letter  →  $appLabel" else "$letter  —  Not set"
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                setOnClickListener {
+                    dialog.dismiss()
+                    viewModel.pendingGestureLetter = letter
+                    showAppListForSwipe(Constants.FLAG_SET_GESTURE_LETTER_APP)
+                }
+            }
+            row.addView(letterTv)
+
+            if (mapping != null) {
+                val clearBtn = android.widget.TextView(requireContext()).apply {
+                    text = "✕"
+                    textSize = 16f
+                    setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+                    setPadding(12.dpToPx(), 0, 0, 0)
+                    setOnClickListener {
+                        GestureLetterManager.removeMapping(requireContext(), letter)
+                        dialog.dismiss()
+                        showGestureLetterConfigDialog()
+                    }
+                }
+                row.addView(clearBtn)
+            }
+
+            container.addView(row)
+        }
+
+        // Disable option
+        val disableOption = android.widget.TextView(requireContext()).apply {
+            text = getString(R.string.disable)
+            textSize = 16f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+            setOnClickListener {
+                GestureLetterManager.setEnabled(requireContext(), false)
+                populateWellbeingSection()
+                dialog.dismiss()
+            }
+        }
+        container.addView(disableOption)
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun showFocusModeFromSettings() {
+        val topApps = viewModel.perAppScreenTime.value?.entries
+            ?.sortedByDescending { it.value }
+            ?.take(10)
+            ?.map { it.key to (requireContext().packageManager.let { pm ->
+                try { pm.getApplicationLabel(pm.getApplicationInfo(it.key, 0)).toString() } catch (_: Exception) { it.key }
+            }) } ?: emptyList()
+        val dialog = FocusModeDialog(requireContext(), topApps)
+        dialog.setOnDismissListener { populateWellbeingSection() }
+        dialog.show()
+    }
+
     private fun exportSettings() {
         try {
             val json = prefs.exportToJson()
@@ -949,7 +1145,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 

@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -29,6 +30,7 @@ import app.olauncher.MainActivity
 import app.olauncher.MainViewModel
 import app.olauncher.R
 import app.olauncher.data.AppModel
+import app.olauncher.data.FolderApp
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
@@ -52,6 +54,8 @@ import app.olauncher.helper.DoubleTapActionManager
 import app.olauncher.helper.FocusModeManager
 import app.olauncher.helper.FolderManager
 import app.olauncher.helper.GestureLetterManager
+import app.olauncher.helper.IconPackManager
+import app.olauncher.helper.isAccessServiceEnabled
 import app.olauncher.helper.GrayscaleManager
 import app.olauncher.helper.HabitStreakManager
 import app.olauncher.helper.QuickNoteManager
@@ -100,6 +104,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
+        initGestureLetterOverlay()
         viewLifecycleOwner.lifecycleScope.launch {
             restoreWidget()
         }
@@ -117,6 +122,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         else
             GrayscaleManager.remove(binding.root)
         viewModel.getWeather()
+        updateGestureLetterOverlay()
     }
 
     override fun onClick(view: View) {
@@ -169,7 +175,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         )
         val slot = homeAppIds[view.id]
         if (slot != null) {
-            showAppList(slot, prefs.getHomeAppName(slot).isNotEmpty(), true)
+            showHomeSlotMenu(slot)
             return true
         }
         when (view.id) {
@@ -338,9 +344,24 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private fun setHomeAppText(textView: TextView, appName: String, packageName: String, userString: String): Boolean {
         if (isPackageInstalled(requireContext(), packageName, userString)) {
             textView.text = appName
+            if (prefs.showIcons && packageName.isNotEmpty()) {
+                val iconSize = 20.dpToPx()
+                val icon = if (prefs.iconPackPackage.isNotEmpty()) {
+                    IconPackManager.getIconForApp(requireContext(), prefs.iconPackPackage, packageName, null)
+                } else null
+                val drawable = icon ?: try {
+                    requireContext().packageManager.getApplicationIcon(packageName)
+                } catch (_: Exception) { null }
+                drawable?.setBounds(0, 0, iconSize, iconSize)
+                textView.setCompoundDrawablesRelative(drawable, null, null, null)
+                textView.compoundDrawablePadding = 8.dpToPx()
+            } else {
+                textView.setCompoundDrawablesRelative(null, null, null, null)
+            }
             return true
         }
         textView.text = ""
+        textView.setCompoundDrawablesRelative(null, null, null, null)
         return false
     }
 
@@ -472,7 +493,11 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private fun lockPhone() {
         requireActivity().runOnUiThread {
             try {
-                deviceManager.lockNow()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isAccessServiceEnabled(requireContext())) {
+                    binding.lock.performClick()
+                } else {
+                    deviceManager.lockNow()
+                }
             } catch (e: SecurityException) {
                 requireContext().showToast(getString(R.string.please_turn_on_double_tap_to_unlock), Toast.LENGTH_LONG)
                 findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
@@ -541,7 +566,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 
@@ -583,6 +608,184 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         dialog.show()
     }
 
+    private fun showHomeSlotMenu(slot: Int) {
+        val hasApp = prefs.getHomeAppName(slot).isNotEmpty()
+        val isFolder = folderManager.isFolderSlot(slot)
+        val isNote = QuickNoteManager.isNoteSlot(requireContext(), slot)
+
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        val handle = View(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = 16.dpToPx()
+            }
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        fun addOption(text: String, onClick: () -> Unit) {
+            val tv = TextView(requireContext()).apply {
+                this.text = text
+                textSize = 16f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                setOnClickListener { dialog.dismiss(); onClick() }
+            }
+            container.addView(tv)
+        }
+
+        // Set / change app
+        addOption(if (hasApp) getString(R.string.rename) else getString(R.string.open_app)) {
+            showAppList(slot, hasApp, true)
+        }
+
+        // Create folder
+        addOption(getString(R.string.create_folder)) {
+            showCreateFolderDialog(slot)
+        }
+
+        // Remove (if occupied)
+        if (hasApp || isFolder || isNote) {
+            addOption(getString(R.string.delete)) {
+                if (isFolder) folderManager.removeFolder(slot)
+                if (isNote) QuickNoteManager.clearSlot(requireContext())
+                prefs.setHomeAppName(slot, "")
+                prefs.setHomeAppPackage(slot, "")
+                prefs.setHomeAppActivityClassName(slot, "")
+                prefs.setHomeAppUser(slot, "")
+                populateHomeScreen(false)
+            }
+        }
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun showCreateFolderDialog(slot: Int) {
+        val dialog = BottomSheetDialog(requireContext())
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
+            setPadding(24.dpToPx(), 16.dpToPx(), 24.dpToPx(), 24.dpToPx())
+        }
+
+        // Title
+        val title = TextView(requireContext()).apply {
+            text = getString(R.string.create_folder)
+            textSize = 18f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, 0, 0, 12.dpToPx())
+        }
+        container.addView(title)
+
+        // Folder name input
+        val nameLabel = TextView(requireContext()).apply {
+            text = getString(R.string.folder_name)
+            textSize = 14f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(nameLabel)
+
+        val nameInput = android.widget.EditText(requireContext()).apply {
+            textSize = 16f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+            setHintTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            hint = "Social, Work, etc."
+            background = null
+            setPadding(0, 8.dpToPx(), 0, 16.dpToPx())
+        }
+        container.addView(nameInput)
+
+        // App selection label
+        val appsLabel = TextView(requireContext()).apply {
+            text = getString(R.string.select_apps)
+            textSize = 14f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
+            setPadding(0, 8.dpToPx(), 0, 4.dpToPx())
+        }
+        container.addView(appsLabel)
+
+        // Get installed apps for selection
+        val pm = requireContext().packageManager
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+            addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfos = pm.queryIntentActivities(intent, 0)
+            .sortedBy { it.loadLabel(pm).toString().lowercase() }
+            .take(50)
+
+        val selectedApps = mutableListOf<FolderApp>()
+        val checkboxes = mutableListOf<android.widget.CheckBox>()
+
+        val scrollView = android.widget.ScrollView(requireContext()).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, 300.dpToPx()
+            )
+        }
+        val appsContainer = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+
+        for (ri in resolveInfos) {
+            val appLabel = ri.loadLabel(pm).toString()
+            val pkg = ri.activityInfo.packageName
+            val activity = ri.activityInfo.name
+            val cb = android.widget.CheckBox(requireContext()).apply {
+                text = appLabel
+                textSize = 14f
+                setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+                setPadding(8.dpToPx(), 2.dpToPx(), 0, 2.dpToPx())
+                setOnCheckedChangeListener { _, isChecked ->
+                    val app = FolderApp(appLabel, pkg, activity, android.os.Process.myUserHandle().toString())
+                    if (isChecked) {
+                        if (selectedApps.size < 4) selectedApps.add(app)
+                        else this.isChecked = false
+                    } else {
+                        selectedApps.removeAll { it.packageName == pkg }
+                    }
+                }
+            }
+            checkboxes.add(cb)
+            appsContainer.addView(cb)
+        }
+        scrollView.addView(appsContainer)
+        container.addView(scrollView)
+
+        // Save button
+        val saveButton = TextView(requireContext()).apply {
+            text = getString(R.string.save)
+            textSize = 16f
+            setTextColor(requireContext().getColorFromAttr(R.attr.primaryColor))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, 16.dpToPx(), 0, 0)
+            setOnClickListener {
+                val folderName = nameInput.text.toString().trim()
+                if (folderName.isEmpty() || selectedApps.isEmpty()) {
+                    requireContext().showToast("Enter a name and select at least one app")
+                    return@setOnClickListener
+                }
+                // Clear any existing app/note at this slot
+                prefs.setHomeAppName(slot, "")
+                prefs.setHomeAppPackage(slot, "")
+                QuickNoteManager.run { if (isNoteSlot(requireContext(), slot)) clearSlot(requireContext()) }
+                folderManager.createFolder(slot, folderName, selectedApps)
+                populateHomeScreen(false)
+                dialog.dismiss()
+            }
+        }
+        container.addView(saveButton)
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
     private fun showQuickNoteDialog() {
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext())
         val view = layoutInflater.inflate(R.layout.dialog_quick_note, null)
@@ -598,6 +801,23 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         dialog.show()
     }
 
+    private fun initGestureLetterOverlay() {
+        binding.gestureLetterOverlay?.onLetterDetected = { letter ->
+            val mapping = GestureLetterManager.getMapping(requireContext(), letter)
+            if (mapping != null) {
+                launchApp("", mapping.first, mapping.second, mapping.third)
+            } else {
+                requireContext().showToast(getString(R.string.no_app_for_letter, letter.toString()))
+            }
+        }
+    }
+
+    private fun updateGestureLetterOverlay() {
+        val enabled = GestureLetterManager.isEnabled(requireContext())
+        binding.gestureLetterOverlay?.isGestureLettersEnabled = enabled
+        binding.gestureLetterOverlay?.visibility = if (enabled) View.VISIBLE else View.GONE
+    }
+
     private fun showLongPressToast() = requireContext().showToast(getString(R.string.long_press_to_select_app))
 
     private fun textOnClick(view: View) = onClick(view)
@@ -606,6 +826,11 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private fun getSwipeGestureListener(context: Context): OnSwipeTouchListener {
         return object : OnSwipeTouchListener(context) {
+            override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
+                binding.gestureLetterOverlay?.forwardTouchEvent(motionEvent)
+                return super.onTouch(view, motionEvent)
+            }
+
             override fun onSwipeLeft() {
                 super.onSwipeLeft()
                 openSwipeLeftApp()
@@ -706,6 +931,27 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         view.findViewById<TextView>(R.id.menuFocusMode).setOnClickListener {
             dialog.dismiss()
             showFocusModeDialog()
+        }
+        view.findViewById<TextView>(R.id.menuQuickNote).setOnClickListener {
+            dialog.dismiss()
+            if (QuickNoteManager.getSlot(requireContext()) == -1) {
+                // Auto-assign to the first available slot
+                val usedSlots = (1..prefs.homeAppsNum).filter { slot ->
+                    prefs.getHomeAppPackage(slot).isNotEmpty() || folderManager.isFolderSlot(slot)
+                }.toSet()
+                val freeSlot = (1..prefs.homeAppsNum).firstOrNull { it !in usedSlots }
+                if (freeSlot != null) {
+                    QuickNoteManager.setSlot(requireContext(), freeSlot)
+                } else {
+                    // Use the last slot
+                    QuickNoteManager.setSlot(requireContext(), prefs.homeAppsNum)
+                }
+            }
+            showQuickNoteDialog()
+        }
+        view.findViewById<TextView>(R.id.menuScreenTime).setOnClickListener {
+            dialog.dismiss()
+            openScreenTimeDigitalWellbeing()
         }
         view.findViewById<TextView>(R.id.menuGrayscale).setOnClickListener {
             dialog.dismiss()
@@ -1064,7 +1310,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryShadeColor))
+            setBackgroundColor(requireContext().getColorFromAttr(R.attr.primaryInverseColor))
             setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
         }
 

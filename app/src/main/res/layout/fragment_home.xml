@@ -209,6 +209,13 @@
 
     </LinearLayout>
 
+    <!-- Gesture letter overlay -->
+    <app.olauncher.ui.GestureLetterOverlayView
+        android:id="@+id/gestureLetterOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
     <!-- Set default launcher -->
     <TextView
         android:id="@+id/setDefaultLauncher"

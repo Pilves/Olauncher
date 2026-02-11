@@ -194,6 +194,14 @@ class Prefs(context: Context) {
         get() = prefs.getInt(WIDGET_PLACEMENT, Constants.WidgetPlacement.ABOVE)
         set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value) }
 
+    var showIcons: Boolean
+        get() = prefs.getBoolean("SHOW_ICONS", false)
+        set(value) = prefs.edit { putBoolean("SHOW_ICONS", value) }
+
+    var iconPackPackage: String
+        get() = prefs.getString("ICON_PACK_PACKAGE", "") ?: ""
+        set(value) = prefs.edit { putString("ICON_PACK_PACKAGE", value) }
+
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
         set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value) }
