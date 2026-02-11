@@ -68,6 +68,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.homeAppsNum.text = prefs.homeAppsNum.toString()
         populateKeyboardText()
         populateScreenTimeOnOff()
+        populateWidgetPlacement()
         populateLockSettings()
         populateWallpaperText()
         populateAppThemeText()
@@ -145,6 +146,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.notifications -> updateSwipeDownAction(Constants.SwipeDownAction.NOTIFICATIONS)
             R.id.search -> updateSwipeDownAction(Constants.SwipeDownAction.SEARCH)
 
+            R.id.widgetPlacement -> toggleWidgetPlacement()
+
             R.id.aboutOlauncher -> requireContext().openUrl(Constants.URL_ABOUT_OLAUNCHER)
             R.id.github -> requireContext().openUrl(Constants.URL_OLAUNCHER_GITHUB)
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
@@ -182,6 +185,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.toggleLock.setOnClickListener(this)
         binding.homeAppsNum.setOnClickListener(this)
         binding.screenTimeOnOff.setOnClickListener(this)
+        binding.widgetPlacement?.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
         binding.alignment.setOnClickListener(this)
@@ -499,6 +503,22 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             if (requireContext().appUsagePermissionGranted()) binding.screenTimeOnOff.text = getString(R.string.on)
             else binding.screenTimeOnOff.text = getString(R.string.off)
         } else binding.screenTimeLayout.visibility = View.GONE
+    }
+
+    private fun toggleWidgetPlacement() {
+        prefs.widgetPlacement = if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
+            Constants.WidgetPlacement.BELOW
+        else
+            Constants.WidgetPlacement.ABOVE
+        populateWidgetPlacement()
+        viewModel.refreshHome(false)
+    }
+
+    private fun populateWidgetPlacement() {
+        binding.widgetPlacement?.text = if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
+            getString(R.string.above_apps)
+        else
+            getString(R.string.below_apps)
     }
 
     private fun populateKeyboardText() {

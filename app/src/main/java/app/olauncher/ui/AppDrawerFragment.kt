@@ -18,6 +18,7 @@ import app.olauncher.R
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentAppDrawerBinding
+import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isEinkDisplay
 import app.olauncher.helper.isSystemApp
@@ -207,6 +208,15 @@ class AppDrawerFragment : Fragment() {
                     adapter.filter.filter(binding.search.query)
                 }
             }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+            && requireContext().appUsagePermissionGranted()
+        ) {
+            viewModel.perAppScreenTime.observe(viewLifecycleOwner) { stats ->
+                adapter.usageStats = stats
+                adapter.notifyDataSetChanged()
+            }
+            viewModel.getPerAppScreenTime()
         }
     }
 

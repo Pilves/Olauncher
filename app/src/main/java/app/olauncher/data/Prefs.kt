@@ -11,7 +11,6 @@ class Prefs(context: Context) {
 
     private val FIRST_OPEN = "FIRST_OPEN"
     private val FIRST_OPEN_TIME = "FIRST_OPEN_TIME"
-    private val FIRST_SETTINGS_OPEN = "FIRST_SETTINGS_OPEN"
     private val FIRST_HIDE = "FIRST_HIDE"
     private val LOCK_MODE = "LOCK_MODE"
     private val HOME_APPS_NUM = "HOME_APPS_NUM"
@@ -35,6 +34,8 @@ class Prefs(context: Context) {
     private val SCREEN_TIME_LAST_UPDATED = "SCREEN_TIME_LAST_UPDATED"
     private val LAUNCHER_RESTART_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
     private val WIDGET_ID = "WIDGET_ID"
+    private val WIDGET_IDS = "WIDGET_IDS"
+    private val WIDGET_PLACEMENT = "WIDGET_PLACEMENT"
 
     private val APP_NAME_1 = "APP_NAME_1"
     private val APP_NAME_2 = "APP_NAME_2"
@@ -93,10 +94,6 @@ class Prefs(context: Context) {
     var firstOpenTime: Long
         get() = prefs.getLong(FIRST_OPEN_TIME, 0L)
         set(value) = prefs.edit { putLong(FIRST_OPEN_TIME, value).apply() }
-
-    var firstSettingsOpen: Boolean
-        get() = prefs.getBoolean(FIRST_SETTINGS_OPEN, true)
-        set(value) = prefs.edit { putBoolean(FIRST_SETTINGS_OPEN, value).apply() }
 
     var firstHide: Boolean
         get() = prefs.getBoolean(FIRST_HIDE, true)
@@ -177,6 +174,31 @@ class Prefs(context: Context) {
     var widgetId: Int
         get() = prefs.getInt(WIDGET_ID, -1)
         set(value) = prefs.edit { putInt(WIDGET_ID, value).apply() }
+
+    var widgetIds: String
+        get() = prefs.getString(WIDGET_IDS, "").toString()
+        set(value) = prefs.edit { putString(WIDGET_IDS, value).apply() }
+
+    var widgetPlacement: Int
+        get() = prefs.getInt(WIDGET_PLACEMENT, Constants.WidgetPlacement.ABOVE)
+        set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value).apply() }
+
+    fun getWidgetIdList(): MutableList<Int> {
+        val raw = widgetIds
+        if (raw.isBlank()) return mutableListOf()
+        return raw.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableList()
+    }
+
+    fun setWidgetIdList(ids: List<Int>) {
+        widgetIds = ids.joinToString(",")
+    }
+
+    fun migrateWidgetIfNeeded() {
+        if (widgetId != -1 && widgetIds.isBlank()) {
+            setWidgetIdList(listOf(widgetId))
+            widgetId = -1
+        }
+    }
 
     var hiddenApps: MutableSet<String>
         get() = prefs.getStringSet(HIDDEN_APPS, mutableSetOf()) as MutableSet<String>

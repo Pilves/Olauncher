@@ -16,3 +16,6 @@
 .externalNativeBuild
 .cxx
 google-services.json
+nul
+*.png
+!app/**/*.png

@@ -18,6 +18,7 @@ import app.olauncher.R
 import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.databinding.AdapterAppDrawerBinding
+import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
 import app.olauncher.helper.showKeyboard
@@ -48,6 +49,8 @@ class AppDrawerAdapter(
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
 
+    var usageStats: Map<String, Long> = emptyMap()
+
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
 
@@ -67,7 +70,8 @@ class AppDrawerAdapter(
                 appDeleteListener,
                 appInfoListener,
                 appHideListener,
-                appRenameListener
+                appRenameListener,
+                usageStats
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -153,6 +157,7 @@ class AppDrawerAdapter(
             appInfoListener: (AppModel) -> Unit,
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
+            usageStats: Map<String, Long> = emptyMap(),
         ) =
             with(binding) {
                 appHideLayout.visibility = View.GONE
@@ -161,6 +166,14 @@ class AppDrawerAdapter(
                 appTitle.text = appModel.appLabel + if (appModel.isNew == true) " ✦" else ""
                 appTitle.gravity = appLabelGravity
                 otherProfileIndicator.isVisible = appModel.user != myUserHandle
+
+                val timeMs = usageStats[appModel.appPackage] ?: 0L
+                if (timeMs > 0 && appModel.appPackage.isNotEmpty()) {
+                    appUsageTime.text = root.context.formattedTimeSpent(timeMs)
+                    appUsageTime.visibility = View.VISIBLE
+                } else {
+                    appUsageTime.visibility = View.GONE
+                }
 
                 appTitle.setOnClickListener { clickListener(appModel) }
                 appTitle.setOnLongClickListener {

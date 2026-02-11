@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -23,7 +22,6 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import app.olauncher.MainActivity
@@ -171,15 +169,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun initObservers() {
-        if (prefs.firstSettingsOpen) {
-            binding.firstRunTips.visibility = View.VISIBLE
-            binding.setDefaultLauncher.visibility = View.GONE
-        } else binding.firstRunTips.visibility = View.GONE
-
         viewModel.refreshHome.observe(viewLifecycleOwner) {
             populateHomeScreen(it)
         }
-        viewModel.isOlauncherDefault.observe(viewLifecycleOwner, Observer {
+        viewModel.isOlauncherDefault.observe(viewLifecycleOwner) {
             if (it != true) {
                 if (prefs.dailyWallpaper) {
                     prefs.dailyWallpaper = false
@@ -188,11 +181,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 prefs.homeBottomAlignment = false
                 setHomeAlignment()
             }
-            if (binding.firstRunTips.visibility == View.VISIBLE) return@Observer
             binding.setDefaultLauncher.isVisible = it.not() && prefs.hideSetDefaultLauncher.not()
-//            if (it) binding.setDefaultLauncher.visibility = View.GONE
-//            else binding.setDefaultLauncher.visibility = View.VISIBLE
-        })
+        }
         viewModel.homeAppAlignment.observe(viewLifecycleOwner) {
             setHomeAlignment(it)
         }
@@ -266,25 +256,6 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         viewModel.getTodaysScreenTime()
         binding.tvScreenTime.visibility = View.VISIBLE
-
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val horizontalMargin = if (isLandscape) 64.dpToPx() else 10.dpToPx()
-        val marginTop = if (isLandscape) {
-            if (prefs.dateTimeVisibility == Constants.DateTime.DATE_ONLY) 36.dpToPx() else 56.dpToPx()
-        } else {
-            if (prefs.dateTimeVisibility == Constants.DateTime.DATE_ONLY) 45.dpToPx() else 72.dpToPx()
-        }
-        val params = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = marginTop
-            marginStart = horizontalMargin
-            marginEnd = horizontalMargin
-            gravity = if (prefs.homeAlignment == Gravity.END) Gravity.START else Gravity.END
-        }
-        binding.tvScreenTime.layoutParams = params
-        binding.tvScreenTime.setPadding(10.dpToPx())
     }
 
     private fun populateHomeScreen(appCountUpdated: Boolean) {
@@ -549,13 +520,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             override fun onLongClick() {
                 super.onLongClick()
                 try {
-                    if (prefs.widgetId == -1) {
-                        showWidgetPicker()
-                    } else {
-                        requireContext().showToast(getString(R.string.widget_already_placed))
-                        findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
-                        viewModel.firstOpen(false)
-                    }
+                    showHomeLongPressMenu()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -609,107 +574,238 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
     }
 
-    private fun restoreWidget() {
-        val savedWidgetId = prefs.widgetId
-        if (savedWidgetId == -1) return
-
-        try {
-            val mainActivity = requireActivity() as MainActivity
-            val info = mainActivity.appWidgetManager.getAppWidgetInfo(savedWidgetId)
-            if (info == null) {
-                prefs.widgetId = -1
-                return
+    private fun showHomeLongPressMenu() {
+        val options = arrayOf(
+            getString(R.string.add_widget),
+            getString(R.string.settings)
+        )
+        AlertDialog.Builder(requireContext())
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showWidgetPicker()
+                    1 -> {
+                        findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
+                        viewModel.firstOpen(false)
+                    }
+                }
             }
-
-            val hostView = mainActivity.appWidgetHost.createView(
-                requireContext().applicationContext, savedWidgetId, info
-            )
-            showWidgetView(hostView)
-        } catch (e: Exception) {
-            android.util.Log.e("HomeFragment", "restoreWidget failed", e)
-            prefs.widgetId = -1
-        }
+            .show()
     }
 
-    private fun showWidgetView(hostView: android.appwidget.AppWidgetHostView) {
-        val container = binding.widgetContainer ?: return
-        container.removeAllViews()
+    // ─── Multi-widget system ───
 
-        // Reduce top padding so widget starts just under the date
-        binding.homeAppsLayout.setPadding(
-            binding.homeAppsLayout.paddingLeft,
-            112.dpToPx(),  // clear the date/time area
-            binding.homeAppsLayout.paddingRight,
-            binding.homeAppsLayout.paddingBottom
-        )
+    private var pendingSwapIndex: Int = -1
 
-        // Set max height (50% of screen) BEFORE adding the widget
-        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
-        container.layoutParams = (container.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
-            height = maxHeight
+    private fun getActiveContainer(): android.widget.LinearLayout {
+        return if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
+            binding.widgetContainerAbove!!
+        else
+            binding.widgetContainerBelow!!
+    }
+
+    private fun getActiveScrollView(): android.widget.ScrollView {
+        return if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
+            binding.widgetScrollViewAbove!!
+        else
+            binding.widgetScrollViewBelow!!
+    }
+
+    private fun restoreWidget() {
+        prefs.migrateWidgetIfNeeded()
+        val ids = prefs.getWidgetIdList()
+        if (ids.isEmpty()) return
+
+        val mainActivity = requireActivity() as MainActivity
+        val validIds = mutableListOf<Int>()
+
+        for (wid in ids) {
+            try {
+                val info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+                if (info == null) {
+                    mainActivity.appWidgetHost.deleteAppWidgetId(wid)
+                    continue
+                }
+                val hostView = mainActivity.appWidgetHost.createView(
+                    requireContext().applicationContext, wid, info
+                )
+                addWidgetToContainer(hostView, wid)
+                validIds.add(wid)
+            } catch (e: Exception) {
+                android.util.Log.e("HomeFragment", "restoreWidget failed for id=$wid", e)
+            }
         }
-        container.clipChildren = true
-        container.clipToPadding = true
+        prefs.setWidgetIdList(validIds)
+        updateWidgetContainerVisibility()
+    }
 
-        // Make the hostView fill the entire container
+    private fun addWidgetToContainer(hostView: android.appwidget.AppWidgetHostView, widgetId: Int) {
+        val container = getActiveContainer()
+        val scrollView = getActiveScrollView()
+
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
+        scrollView.layoutParams = (scrollView.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
+            height = android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+        }
+
+        val wrapper = FrameLayout(requireContext()).apply {
+            tag = widgetId
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                maxHeight / maxOf(prefs.getWidgetIdList().size, 1)
+            )
+            clipChildren = true
+            clipToPadding = true
+        }
+
         hostView.layoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         )
-        container.addView(hostView)
-        container.visibility = View.VISIBLE
+        wrapper.addView(hostView)
 
-        // After layout, tell the widget its actual size so it can render properly
-        container.post {
-            val widthDp = (container.width / resources.displayMetrics.density).toInt()
-            val heightDp = (container.height / resources.displayMetrics.density).toInt()
-            val options = Bundle().apply {
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
-            }
-            hostView.updateAppWidgetSize(options, widthDp, heightDp, widthDp, heightDp)
+        wrapper.setOnLongClickListener {
+            showWidgetOptionsDialog(widgetId)
+            true
         }
 
-        // Long-press on widget to remove it
-        container.setOnLongClickListener {
-            showRemoveWidgetDialog()
-            true
+        container.addView(wrapper)
+
+        wrapper.post {
+            val widthDp = (wrapper.width / resources.displayMetrics.density).toInt()
+            val heightDp = (wrapper.height / resources.displayMetrics.density).toInt()
+            if (widthDp > 0 && heightDp > 0) {
+                val options = Bundle().apply {
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+                }
+                hostView.updateAppWidgetSize(options, widthDp, heightDp, widthDp, heightDp)
+            }
         }
     }
 
-    private fun showRemoveWidgetDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.remove_widget)
-            .setMessage(R.string.remove_widget_confirm)
-            .setPositiveButton(R.string.okay) { _, _ ->
-                removeWidget()
+    private fun updateWidgetContainerVisibility() {
+        val ids = prefs.getWidgetIdList()
+        val hasWidgets = ids.isNotEmpty()
+
+        if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE) {
+            binding.widgetScrollViewAbove?.visibility = if (hasWidgets) View.VISIBLE else View.GONE
+            binding.widgetScrollViewBelow?.visibility = View.GONE
+            binding.widgetContainerBelow?.removeAllViews()
+        } else {
+            binding.widgetScrollViewBelow?.visibility = if (hasWidgets) View.VISIBLE else View.GONE
+            binding.widgetScrollViewAbove?.visibility = View.GONE
+            binding.widgetContainerAbove?.removeAllViews()
+        }
+
+        resizeWidgetWrappers()
+    }
+
+    private fun resizeWidgetWrappers() {
+        val container = getActiveContainer()
+        val count = container.childCount
+        if (count == 0) return
+
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
+        val perWidget = maxHeight / count
+
+        for (i in 0 until count) {
+            val wrapper = container.getChildAt(i)
+            wrapper.layoutParams = (wrapper.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
+                height = perWidget
             }
+        }
+    }
+
+    private fun showWidgetOptionsDialog(widgetId: Int) {
+        val ids = prefs.getWidgetIdList()
+        val index = ids.indexOf(widgetId)
+
+        val options = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+
+        options.add(getString(R.string.swap_widget))
+        actions.add {
+            pendingSwapIndex = index
+            showWidgetPicker { providerInfo -> bindWidget(providerInfo, replaceIndex = index) }
+        }
+
+        options.add(getString(R.string.remove_widget))
+        actions.add { removeWidget(widgetId) }
+
+        if (ids.size > 1 && index > 0) {
+            options.add(getString(R.string.move_up))
+            actions.add { moveWidget(index, index - 1) }
+        }
+        if (ids.size > 1 && index < ids.size - 1) {
+            options.add(getString(R.string.move_down))
+            actions.add { moveWidget(index, index + 1) }
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.widget_options)
+            .setItems(options.toTypedArray()) { _, which -> actions[which]() }
             .setNegativeButton(R.string.not_now, null)
             .show()
     }
 
-    private fun removeWidget() {
-        val mainActivity = requireActivity() as MainActivity
-        val widgetId = prefs.widgetId
-        if (widgetId != -1) {
-            mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
-        }
-        prefs.widgetId = -1
-        binding.widgetContainer?.removeAllViews()
-        binding.widgetContainer?.visibility = View.GONE
-
-        // Restore original top padding
-        binding.homeAppsLayout.setPadding(
-            binding.homeAppsLayout.paddingLeft,
-            112.dpToPx(),
-            binding.homeAppsLayout.paddingRight,
-            binding.homeAppsLayout.paddingBottom
-        )
+    private fun moveWidget(fromIndex: Int, toIndex: Int) {
+        val ids = prefs.getWidgetIdList()
+        val id = ids.removeAt(fromIndex)
+        ids.add(toIndex, id)
+        prefs.setWidgetIdList(ids)
+        rebuildWidgetContainer()
     }
 
-    private fun showWidgetPicker() {
+    private fun rebuildWidgetContainer() {
+        val container = getActiveContainer()
+        container.removeAllViews()
+        val scrollView = getActiveScrollView()
+        scrollView.visibility = View.GONE
+
+        val ids = prefs.getWidgetIdList()
+        if (ids.isEmpty()) return
+
+        val mainActivity = requireActivity() as MainActivity
+        val validIds = mutableListOf<Int>()
+
+        for (wid in ids) {
+            try {
+                val info = mainActivity.appWidgetManager.getAppWidgetInfo(wid) ?: continue
+                val hostView = mainActivity.appWidgetHost.createView(
+                    requireContext().applicationContext, wid, info
+                )
+                addWidgetToContainer(hostView, wid)
+                validIds.add(wid)
+            } catch (e: Exception) {
+                android.util.Log.e("HomeFragment", "rebuildWidget failed for id=$wid", e)
+            }
+        }
+        prefs.setWidgetIdList(validIds)
+        updateWidgetContainerVisibility()
+    }
+
+    private fun removeWidget(widgetId: Int) {
+        val mainActivity = requireActivity() as MainActivity
+        mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
+
+        val ids = prefs.getWidgetIdList()
+        ids.remove(widgetId)
+        prefs.setWidgetIdList(ids)
+
+        // Remove from container
+        val container = getActiveContainer()
+        for (i in 0 until container.childCount) {
+            if (container.getChildAt(i).tag == widgetId) {
+                container.removeViewAt(i)
+                break
+            }
+        }
+        updateWidgetContainerVisibility()
+    }
+
+    private fun showWidgetPicker(onSelected: (AppWidgetProviderInfo) -> Unit = { bindWidget(it) }) {
         val mainActivity = requireActivity() as MainActivity
         val installedProviders = mainActivity.appWidgetManager.installedProviders
         if (installedProviders.isEmpty()) {
@@ -717,7 +813,6 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             return
         }
 
-        // Group widgets by app name
         val pm = requireContext().packageManager
         val grouped = installedProviders.groupBy { provider ->
             try {
@@ -729,13 +824,11 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             }
         }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
 
-        // Build flat list with headers
-        val items = mutableListOf<Pair<String, AppWidgetProviderInfo?>>() // label, null = header
+        val items = mutableListOf<Pair<String, AppWidgetProviderInfo?>>()
         for ((appName, providers) in grouped) {
-            items.add(Pair(appName, null)) // header
+            items.add(Pair(appName, null))
             for (provider in providers) {
-                val widgetLabel = provider.loadLabel(pm)
-                items.add(Pair(widgetLabel, provider))
+                items.add(Pair(provider.loadLabel(pm), provider))
             }
         }
 
@@ -756,7 +849,6 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val item = items[position]
                 val isHeader = item.second == null
-
                 val textView = (convertView as? TextView) ?: TextView(requireContext())
 
                 if (isHeader) {
@@ -774,7 +866,6 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                     textView.alpha = 1.0f
                     textView.setPadding(24.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                 }
-
                 return textView
             }
         }
@@ -782,14 +873,14 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         listView.setOnItemClickListener { _, _, position, _ ->
             val providerInfo = items[position].second ?: return@setOnItemClickListener
             dialog.dismiss()
-            bindWidget(providerInfo)
+            onSelected(providerInfo)
         }
 
         dialog.setContentView(listView)
         dialog.show()
     }
 
-    private fun bindWidget(providerInfo: AppWidgetProviderInfo) {
+    private fun bindWidget(providerInfo: AppWidgetProviderInfo, replaceIndex: Int = -1) {
         try {
             val mainActivity = requireActivity() as MainActivity
             val widgetId = mainActivity.appWidgetHost.allocateAppWidgetId()
@@ -801,12 +892,12 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             )
 
             if (allowed) {
-                onWidgetBound(widgetId, providerInfo)
+                onWidgetBound(widgetId, providerInfo, replaceIndex)
             } else {
-                // Need to request permission
+                val capturedReplaceIndex = replaceIndex
                 mainActivity.onWidgetBindResult = { success ->
                     if (success) {
-                        onWidgetBound(mainActivity.pendingWidgetId, mainActivity.pendingWidgetInfo!!)
+                        onWidgetBound(mainActivity.pendingWidgetId, mainActivity.pendingWidgetInfo!!, capturedReplaceIndex)
                     } else {
                         mainActivity.appWidgetHost.deleteAppWidgetId(mainActivity.pendingWidgetId)
                         requireContext().showToast("Widget bind permission denied")
@@ -824,21 +915,19 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
     }
 
-    private fun onWidgetBound(widgetId: Int, providerInfo: AppWidgetProviderInfo) {
+    private fun onWidgetBound(widgetId: Int, providerInfo: AppWidgetProviderInfo, replaceIndex: Int) {
         try {
             val mainActivity = requireActivity() as MainActivity
 
             if (providerInfo.configure != null) {
-                // Widget has a configure activity (e.g. Google Calendar)
+                val capturedReplaceIndex = replaceIndex
                 mainActivity.onWidgetConfigureResult = { success ->
                     if (success) {
-                        finishWidgetSetup(widgetId, providerInfo)
+                        finishWidgetSetup(widgetId, providerInfo, capturedReplaceIndex)
                     } else {
-                        // Some widgets (like Google Calendar) still work after config cancel.
-                        // Check if the widget info is still valid before deleting.
                         val stillValid = mainActivity.appWidgetManager.getAppWidgetInfo(widgetId)
                         if (stillValid != null) {
-                            finishWidgetSetup(widgetId, providerInfo)
+                            finishWidgetSetup(widgetId, providerInfo, capturedReplaceIndex)
                         } else {
                             mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
                         }
@@ -850,7 +939,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 }
                 mainActivity.configureWidgetLauncher.launch(configIntent)
             } else {
-                finishWidgetSetup(widgetId, providerInfo)
+                finishWidgetSetup(widgetId, providerInfo, replaceIndex)
             }
         } catch (e: Exception) {
             android.util.Log.e("HomeFragment", "onWidgetBound failed", e)
@@ -858,32 +947,26 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
     }
 
-    private fun finishWidgetSetup(widgetId: Int, providerInfo: AppWidgetProviderInfo) {
+    private fun finishWidgetSetup(widgetId: Int, providerInfo: AppWidgetProviderInfo, replaceIndex: Int) {
         try {
             val mainActivity = requireActivity() as MainActivity
-            prefs.widgetId = widgetId
+            val ids = prefs.getWidgetIdList()
 
-            val hostView = mainActivity.appWidgetHost.createView(
-                requireContext().applicationContext, widgetId, providerInfo
-            )
-            showWidgetView(hostView)
+            if (replaceIndex in ids.indices) {
+                // Swap: remove old widget, insert new one at same position
+                val oldId = ids[replaceIndex]
+                mainActivity.appWidgetHost.deleteAppWidgetId(oldId)
+                ids[replaceIndex] = widgetId
+            } else {
+                // Add new
+                ids.add(widgetId)
+            }
+            prefs.setWidgetIdList(ids)
+
+            rebuildWidgetContainer()
         } catch (e: Exception) {
             android.util.Log.e("HomeFragment", "finishWidgetSetup failed", e)
             requireContext().showToast("Couldn't add widget: ${e.message}")
-        }
-    }
-
-    private fun resolveBottomSheetTextColor(): Int {
-        // The Material BottomSheetDialog uses the theme's surface color as background.
-        // Resolve android:textColorPrimary which is guaranteed to contrast with surface.
-        val typedValue = android.util.TypedValue()
-        requireContext().theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-        val colorRes = typedValue.resourceId
-        return if (colorRes != 0) {
-            requireContext().getColor(colorRes)
-        } else {
-            // Fallback: if dark mode, use black (sheet is light); if light mode, also black
-            android.graphics.Color.BLACK
         }
     }
 

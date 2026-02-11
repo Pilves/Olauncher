@@ -26,15 +26,35 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <TextClock
-            android:id="@+id/clock"
-            style="@style/TextDefault"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/clockRow"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-light"
-            android:format12Hour="h:mm"
-            android:textSize="@dimen/time_size"
-            tools:text="02:34" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextClock
+                android:id="@+id/clock"
+                style="@style/TextDefault"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:format12Hour="h:mm"
+                android:textSize="@dimen/time_size"
+                tools:text="02:34" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tvScreenTime"
+                style="@style/TextSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:alpha="0.6"
+                android:textSize="@dimen/date_size"
+                android:visibility="gone"
+                tools:text="2h 11m"
+                tools:visibility="visible" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/date"
@@ -48,22 +68,6 @@
             tools:text="Thu, 30 Dec" />
     </LinearLayout>
 
-    <!-- Screen time-->
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvScreenTime"
-        style="@style/TextSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginHorizontal="10dp"
-        android:layout_marginTop="72dp"
-        android:gravity="center"
-        android:padding="10dp"
-        android:textSize="@dimen/date_size"
-        android:visibility="gone"
-        tools:text="2h 11m"
-        tools:visibility="visible" />
-
     <!-- Home apps-->
     <LinearLayout
         android:id="@+id/homeAppsLayout"
@@ -75,16 +79,25 @@
         android:paddingTop="112dp"
         android:paddingBottom="48dp">
 
-        <!-- Widget container - negative margins to counteract parent's 20dp padding -->
-        <FrameLayout
-            android:id="@+id/widgetContainer"
+        <!-- Widget container above apps -->
+        <ScrollView
+            android:id="@+id/widgetScrollViewAbove"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="-12dp"
             android:layout_marginEnd="-12dp"
             android:layout_marginBottom="8dp"
+            android:fillViewport="true"
+            android:scrollbars="none"
             android:visibility="gone"
-            tools:visibility="gone" />
+            tools:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/widgetContainerAbove"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
 
         <TextView
             android:id="@+id/homeApp1"
@@ -174,20 +187,27 @@
             android:visibility="gone"
             tools:visibility="visible" />
 
-    </LinearLayout>
+        <!-- Widget container below apps -->
+        <ScrollView
+            android:id="@+id/widgetScrollViewBelow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-12dp"
+            android:layout_marginEnd="-12dp"
+            android:layout_marginTop="8dp"
+            android:fillViewport="true"
+            android:scrollbars="none"
+            android:visibility="gone"
+            tools:visibility="gone">
 
-    <TextView
-        android:id="@+id/firstRunTips"
-        style="@style/TextSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="56dp"
-        android:text="@string/swipe_up_for_apps"
-        android:visibility="gone"
-        tools:visibility="visible" />
+            <LinearLayout
+                android:id="@+id/widgetContainerBelow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+    </LinearLayout>
 
     <!-- Set default launcher -->
     <TextView

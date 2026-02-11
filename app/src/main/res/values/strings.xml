@@ -130,8 +130,16 @@
     <string name="alignment_changed">Alignment changed ✅</string>
     <string name="home_screen">Home screen</string>
     <string name="notification_bar">Notification bar</string>
-    <string name="widget_already_placed">Widget already placed</string>
     <string name="remove_widget">Remove widget</string>
     <string name="remove_widget_confirm">Remove this widget from your home screen?</string>
     <string name="no_widgets_available">No widgets available</string>
+    <string name="add_widget">Add widget</string>
+    <string name="settings">Settings</string>
+    <string name="widget_placement">Widget placement</string>
+    <string name="above_apps">Above apps</string>
+    <string name="below_apps">Below apps</string>
+    <string name="widget_options">Widget options</string>
+    <string name="swap_widget">Swap widget</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
 </resources>

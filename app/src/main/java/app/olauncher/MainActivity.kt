@@ -12,8 +12,8 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.View
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -123,9 +123,6 @@ class MainActivity : AppCompatActivity() {
             viewModel.resetLauncherLiveData.call()
         }
 
-        binding.ivClose.setOnClickListener {
-            binding.messageLayout.visibility = View.GONE
-        }
         initObservers(viewModel)
         viewModel.getAppList()
         setupOrientation()
@@ -177,36 +174,34 @@ class MainActivity : AppCompatActivity() {
         }
         viewModel.showDialog.observe(this) {
             when (it) {
-                Constants.Dialog.ABOUT -> {
-                    showMessageDialog(R.string.app_name, R.string.welcome_to_olauncher_settings, R.string.okay) {}
-                }
-
                 Constants.Dialog.HIDDEN -> {
-                    showMessageDialog(R.string.hidden_apps, R.string.hidden_apps_message, R.string.okay) {}
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.hidden_apps)
+                        .setMessage(R.string.hidden_apps_message)
+                        .setPositiveButton(R.string.okay, null)
+                        .show()
                 }
 
                 Constants.Dialog.KEYBOARD -> {
-                    showMessageDialog(R.string.app_name, R.string.keyboard_message, R.string.okay) {}
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.app_name)
+                        .setMessage(R.string.keyboard_message)
+                        .setPositiveButton(R.string.okay, null)
+                        .show()
                 }
 
                 Constants.Dialog.DIGITAL_WELLBEING -> {
-                    showMessageDialog(R.string.screen_time, R.string.app_usage_message, R.string.permission) {
-                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                    }
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.screen_time)
+                        .setMessage(R.string.app_usage_message)
+                        .setPositiveButton(R.string.okay) { _, _ ->
+                            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        }
+                        .setNegativeButton(R.string.not_now, null)
+                        .show()
                 }
             }
         }
-    }
-
-    private fun showMessageDialog(title: Int, message: Int, action: Int, clickListener: () -> Unit) {
-        binding.tvTitle.text = getString(title)
-        binding.tvMessage.text = getString(message)
-        binding.tvAction.text = getString(action)
-        binding.tvAction.setOnClickListener {
-            clickListener()
-            binding.messageLayout.visibility = View.GONE
-        }
-        binding.messageLayout.visibility = View.VISIBLE
     }
 
     @SuppressLint("SourceLockedOrientationActivity")

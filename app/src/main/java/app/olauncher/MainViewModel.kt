@@ -45,6 +45,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val launcherResetFailed = MutableLiveData<Boolean>()
     val homeAppAlignment = MutableLiveData<Int>()
     val screenTimeValue = MutableLiveData<String>()
+    val perAppScreenTime = MutableLiveData<Map<String, Long>>()
 
     val showDialog = SingleLiveEvent<String>()
     val resetLauncherLiveData = SingleLiveEvent<Unit?>()
@@ -267,6 +268,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val viewTimeSpent = appContext.formattedTimeSpent(timeSpent)
         screenTimeValue.postValue(viewTimeSpent)
         prefs.screenTimeLastUpdated = endTime
+    }
+
+    fun getPerAppScreenTime() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
+        if (prefs.screenTimeLastUpdated.hasBeenMinutes(1).not()) {
+            // Reuse cached value if available
+            if (perAppScreenTime.value != null) return
+        }
+
+        val eventLogWrapper = EventLogWrapper(appContext)
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+
+        val usageStats = eventLogWrapper.aggregateForegroundStats(
+            eventLogWrapper.getForegroundStatsByTimestamps(startTime, endTime)
+        )
+        val map = mutableMapOf<String, Long>()
+        for (stat in usageStats) {
+            map[stat.applicationId] = (map[stat.applicationId] ?: 0L) + stat.timeUsed
+        }
+        perAppScreenTime.postValue(map)
     }
 
     fun setDefaultClockApp() {
