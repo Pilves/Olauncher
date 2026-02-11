@@ -75,6 +75,17 @@
         android:paddingTop="112dp"
         android:paddingBottom="48dp">
 
+        <!-- Widget container - negative margins to counteract parent's 20dp padding -->
+        <FrameLayout
+            android:id="@+id/widgetContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-12dp"
+            android:layout_marginEnd="-12dp"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            tools:visibility="gone" />
+
         <TextView
             android:id="@+id/homeApp1"
             style="@style/TextLarge"

@@ -160,4 +160,8 @@
     <string name="new_year_wish_1">It doesn\'t matter how January went. You still have the rest of the year to do better than ever.</string>
     <string name="cheers">Cheers!</string>
     <string name="notification_bar">Notification bar</string>
+    <string name="widget_already_placed">Widget already placed</string>
+    <string name="remove_widget">Remove widget</string>
+    <string name="remove_widget_confirm">Remove this widget from your home screen?</string>
+    <string name="no_widgets_available">No widgets available</string>
 </resources>

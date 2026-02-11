@@ -1,6 +1,8 @@
 package app.olauncher.ui
 
 import android.app.admin.DevicePolicyManager
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -16,6 +18,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
@@ -23,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import app.olauncher.MainActivity
 import app.olauncher.MainViewModel
 import app.olauncher.R
 import app.olauncher.data.AppModel
@@ -44,6 +48,7 @@ import app.olauncher.helper.setPlainWallpaperByTheme
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -75,6 +80,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
+        restoreWidget()
     }
 
     override fun onResume() {
@@ -543,8 +549,13 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             override fun onLongClick() {
                 super.onLongClick()
                 try {
-                    findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
-                    viewModel.firstOpen(false)
+                    if (prefs.widgetId == -1) {
+                        showWidgetPicker()
+                    } else {
+                        requireContext().showToast(getString(R.string.widget_already_placed))
+                        findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
+                        viewModel.firstOpen(false)
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -596,6 +607,284 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 super.onClick(view)
                 textOnClick(view)
             }
+        }
+    }
+
+    private fun restoreWidget() {
+        val savedWidgetId = prefs.widgetId
+        if (savedWidgetId == -1) return
+
+        try {
+            val mainActivity = requireActivity() as MainActivity
+            val info = mainActivity.appWidgetManager.getAppWidgetInfo(savedWidgetId)
+            if (info == null) {
+                prefs.widgetId = -1
+                return
+            }
+
+            val hostView = mainActivity.appWidgetHost.createView(
+                requireContext().applicationContext, savedWidgetId, info
+            )
+            showWidgetView(hostView)
+        } catch (e: Exception) {
+            android.util.Log.e("HomeFragment", "restoreWidget failed", e)
+            prefs.widgetId = -1
+        }
+    }
+
+    private fun showWidgetView(hostView: android.appwidget.AppWidgetHostView) {
+        val container = binding.widgetContainer ?: return
+        container.removeAllViews()
+
+        // Reduce top padding so widget starts just under the date
+        binding.homeAppsLayout.setPadding(
+            binding.homeAppsLayout.paddingLeft,
+            112.dpToPx(),  // clear the date/time area
+            binding.homeAppsLayout.paddingRight,
+            binding.homeAppsLayout.paddingBottom
+        )
+
+        // Set max height (50% of screen) BEFORE adding the widget
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.50).toInt()
+        container.layoutParams = (container.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
+            height = maxHeight
+        }
+        container.clipChildren = true
+        container.clipToPadding = true
+
+        // Make the hostView fill the entire container
+        hostView.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+        container.addView(hostView)
+        container.visibility = View.VISIBLE
+
+        // After layout, tell the widget its actual size so it can render properly
+        container.post {
+            val widthDp = (container.width / resources.displayMetrics.density).toInt()
+            val heightDp = (container.height / resources.displayMetrics.density).toInt()
+            val options = Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+            }
+            hostView.updateAppWidgetSize(options, widthDp, heightDp, widthDp, heightDp)
+        }
+
+        // Long-press on widget to remove it
+        container.setOnLongClickListener {
+            showRemoveWidgetDialog()
+            true
+        }
+    }
+
+    private fun showRemoveWidgetDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.remove_widget)
+            .setMessage(R.string.remove_widget_confirm)
+            .setPositiveButton(R.string.okay) { _, _ ->
+                removeWidget()
+            }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
+    }
+
+    private fun removeWidget() {
+        val mainActivity = requireActivity() as MainActivity
+        val widgetId = prefs.widgetId
+        if (widgetId != -1) {
+            mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
+        }
+        prefs.widgetId = -1
+        binding.widgetContainer?.removeAllViews()
+        binding.widgetContainer?.visibility = View.GONE
+
+        // Restore original top padding
+        binding.homeAppsLayout.setPadding(
+            binding.homeAppsLayout.paddingLeft,
+            112.dpToPx(),
+            binding.homeAppsLayout.paddingRight,
+            binding.homeAppsLayout.paddingBottom
+        )
+    }
+
+    private fun showWidgetPicker() {
+        val mainActivity = requireActivity() as MainActivity
+        val installedProviders = mainActivity.appWidgetManager.installedProviders
+        if (installedProviders.isEmpty()) {
+            requireContext().showToast(getString(R.string.no_widgets_available))
+            return
+        }
+
+        // Group widgets by app name
+        val pm = requireContext().packageManager
+        val grouped = installedProviders.groupBy { provider ->
+            try {
+                pm.getApplicationLabel(
+                    pm.getApplicationInfo(provider.provider.packageName, 0)
+                ).toString()
+            } catch (e: Exception) {
+                provider.provider.packageName
+            }
+        }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
+
+        // Build flat list with headers
+        val items = mutableListOf<Pair<String, AppWidgetProviderInfo?>>() // label, null = header
+        for ((appName, providers) in grouped) {
+            items.add(Pair(appName, null)) // header
+            for (provider in providers) {
+                val widgetLabel = provider.loadLabel(pm)
+                items.add(Pair(widgetLabel, provider))
+            }
+        }
+
+        val dialog = BottomSheetDialog(requireContext())
+        val listView = android.widget.ListView(requireContext())
+
+        val textColor = android.graphics.Color.BLACK
+        val headerColor = android.graphics.Color.DKGRAY
+
+        listView.adapter = object : android.widget.BaseAdapter() {
+            override fun getCount() = items.size
+            override fun getItem(position: Int) = items[position]
+            override fun getItemId(position: Int) = position.toLong()
+            override fun getViewTypeCount() = 2
+            override fun getItemViewType(position: Int) = if (items[position].second == null) 0 else 1
+            override fun isEnabled(position: Int) = items[position].second != null
+
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val item = items[position]
+                val isHeader = item.second == null
+
+                val textView = (convertView as? TextView) ?: TextView(requireContext())
+
+                if (isHeader) {
+                    textView.text = item.first
+                    textView.textSize = 14f
+                    textView.setTypeface(null, android.graphics.Typeface.BOLD)
+                    textView.setTextColor(headerColor)
+                    textView.alpha = 0.6f
+                    textView.setPadding(16.dpToPx(), 12.dpToPx(), 16.dpToPx(), 4.dpToPx())
+                } else {
+                    textView.text = item.first
+                    textView.textSize = 16f
+                    textView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                    textView.setTextColor(textColor)
+                    textView.alpha = 1.0f
+                    textView.setPadding(24.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                }
+
+                return textView
+            }
+        }
+
+        listView.setOnItemClickListener { _, _, position, _ ->
+            val providerInfo = items[position].second ?: return@setOnItemClickListener
+            dialog.dismiss()
+            bindWidget(providerInfo)
+        }
+
+        dialog.setContentView(listView)
+        dialog.show()
+    }
+
+    private fun bindWidget(providerInfo: AppWidgetProviderInfo) {
+        try {
+            val mainActivity = requireActivity() as MainActivity
+            val widgetId = mainActivity.appWidgetHost.allocateAppWidgetId()
+            mainActivity.pendingWidgetId = widgetId
+            mainActivity.pendingWidgetInfo = providerInfo
+
+            val allowed = mainActivity.appWidgetManager.bindAppWidgetIdIfAllowed(
+                widgetId, providerInfo.provider
+            )
+
+            if (allowed) {
+                onWidgetBound(widgetId, providerInfo)
+            } else {
+                // Need to request permission
+                mainActivity.onWidgetBindResult = { success ->
+                    if (success) {
+                        onWidgetBound(mainActivity.pendingWidgetId, mainActivity.pendingWidgetInfo!!)
+                    } else {
+                        mainActivity.appWidgetHost.deleteAppWidgetId(mainActivity.pendingWidgetId)
+                        requireContext().showToast("Widget bind permission denied")
+                    }
+                }
+                val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+                }
+                mainActivity.bindWidgetLauncher.launch(intent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HomeFragment", "bindWidget failed", e)
+            requireContext().showToast("Couldn't bind widget: ${e.message}")
+        }
+    }
+
+    private fun onWidgetBound(widgetId: Int, providerInfo: AppWidgetProviderInfo) {
+        try {
+            val mainActivity = requireActivity() as MainActivity
+
+            if (providerInfo.configure != null) {
+                // Widget has a configure activity (e.g. Google Calendar)
+                mainActivity.onWidgetConfigureResult = { success ->
+                    if (success) {
+                        finishWidgetSetup(widgetId, providerInfo)
+                    } else {
+                        // Some widgets (like Google Calendar) still work after config cancel.
+                        // Check if the widget info is still valid before deleting.
+                        val stillValid = mainActivity.appWidgetManager.getAppWidgetInfo(widgetId)
+                        if (stillValid != null) {
+                            finishWidgetSetup(widgetId, providerInfo)
+                        } else {
+                            mainActivity.appWidgetHost.deleteAppWidgetId(widgetId)
+                        }
+                    }
+                }
+                val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                    component = providerInfo.configure
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                }
+                mainActivity.configureWidgetLauncher.launch(configIntent)
+            } else {
+                finishWidgetSetup(widgetId, providerInfo)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HomeFragment", "onWidgetBound failed", e)
+            requireContext().showToast("Widget setup failed: ${e.message}")
+        }
+    }
+
+    private fun finishWidgetSetup(widgetId: Int, providerInfo: AppWidgetProviderInfo) {
+        try {
+            val mainActivity = requireActivity() as MainActivity
+            prefs.widgetId = widgetId
+
+            val hostView = mainActivity.appWidgetHost.createView(
+                requireContext().applicationContext, widgetId, providerInfo
+            )
+            showWidgetView(hostView)
+        } catch (e: Exception) {
+            android.util.Log.e("HomeFragment", "finishWidgetSetup failed", e)
+            requireContext().showToast("Couldn't add widget: ${e.message}")
+        }
+    }
+
+    private fun resolveBottomSheetTextColor(): Int {
+        // The Material BottomSheetDialog uses the theme's surface color as background.
+        // Resolve android:textColorPrimary which is guaranteed to contrast with surface.
+        val typedValue = android.util.TypedValue()
+        requireContext().theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+        val colorRes = typedValue.resourceId
+        return if (colorRes != 0) {
+            requireContext().getColor(colorRes)
+        } else {
+            // Fallback: if dark mode, use black (sheet is light); if light mode, also black
+            android.graphics.Color.BLACK
         }
     }
 

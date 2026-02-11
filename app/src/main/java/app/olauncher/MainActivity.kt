@@ -2,6 +2,9 @@ package app.olauncher
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -12,6 +15,8 @@ import android.provider.Settings
 import android.view.View
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModelProvider
@@ -51,6 +56,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var timerJob: Job? = null
 
+    lateinit var appWidgetHost: AppWidgetHost
+    lateinit var appWidgetManager: AppWidgetManager
+    var pendingWidgetId: Int = -1
+    var pendingWidgetInfo: AppWidgetProviderInfo? = null
+
+    var onWidgetBindResult: ((Boolean) -> Unit)? = null
+    var onWidgetConfigureResult: ((Boolean) -> Unit)? = null
+
+    lateinit var bindWidgetLauncher: ActivityResultLauncher<Intent>
+    lateinit var configureWidgetLauncher: ActivityResultLauncher<Intent>
+
 //    override fun onBackPressed() {
 //        if (navController.currentDestination?.id != R.id.mainFragment)
 //            super.onBackPressed()
@@ -73,6 +89,25 @@ class MainActivity : AppCompatActivity() {
 
         navController = this.findNavController(R.id.nav_host_fragment)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        appWidgetManager = AppWidgetManager.getInstance(this)
+        appWidgetHost = AppWidgetHost(this, Constants.APPWIDGET_HOST_ID)
+
+        bindWidgetLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val success = result.resultCode == Activity.RESULT_OK
+            onWidgetBindResult?.invoke(success)
+            onWidgetBindResult = null
+        }
+
+        configureWidgetLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val success = result.resultCode == Activity.RESULT_OK
+            onWidgetConfigureResult?.invoke(success)
+            onWidgetConfigureResult = null
+        }
 
         val onBackPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -108,10 +143,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        appWidgetHost.startListening()
         restartLauncherOrCheckTheme()
     }
 
     override fun onStop() {
+        appWidgetHost.stopListening()
         backToHomeScreen()
         super.onStop()
     }
