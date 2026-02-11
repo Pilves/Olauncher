@@ -25,7 +25,6 @@ import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.provider.Settings
-import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
@@ -112,7 +111,7 @@ suspend fun getAppsList(
             appList.sortBy { it.appLabel.lowercase() }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("Utils", "Failed to get apps list", e)
         }
         appList
     }
@@ -189,7 +188,7 @@ fun setPlainWallpaper(context: Context, color: Int) {
             manager.setBitmap(bitmap)
         bitmap.recycle()
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Utils", "Failed to set plain wallpaper", e)
     }
 }
 
@@ -228,7 +227,7 @@ suspend fun getBitmapFromURL(src: String?): Bitmap? {
             val input: InputStream = connection.inputStream
             bitmap = BitmapFactory.decodeStream(input)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("Utils", "Failed to decode bitmap from URL", e)
         } finally {
             connection?.disconnect()
         }
@@ -287,7 +286,7 @@ suspend fun setWallpaper(appContext: Context, url: String): Boolean {
             originalImageBitmap.recycle()
             scaledBitmap.recycle()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("Utils", "Failed to recycle wallpaper bitmaps", e)
         }
         true
     }
@@ -295,9 +294,16 @@ suspend fun setWallpaper(appContext: Context, url: String): Boolean {
 
 fun getScreenDimensions(context: Context): Pair<Int, Int> {
     val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val point = Point()
-    windowManager.defaultDisplay.getRealSize(point)
-    return Pair(point.x, point.y)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val windowMetrics = windowManager.currentWindowMetrics
+        val bounds = windowMetrics.bounds
+        Pair(bounds.width(), bounds.height())
+    } else {
+        val point = Point()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealSize(point)
+        Pair(point.x, point.y)
+    }
 }
 
 suspend fun getTodaysWallpaper(wallType: String, firstOpenTime: Long): String {
@@ -363,7 +369,7 @@ fun expandNotificationDrawer(context: Context) {
         val method = statusBarManager.getMethod("expandNotificationsPanel")
         method.invoke(statusBarService)
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Utils", "Failed to expand notification drawer", e)
     }
 }
 
@@ -372,7 +378,7 @@ fun openDialerApp(context: Context) {
         val sendIntent = Intent(Intent.ACTION_DIAL)
         context.startActivity(sendIntent)
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Utils", "Failed to open dialer app", e)
     }
 }
 
@@ -381,7 +387,7 @@ fun openCameraApp(context: Context) {
         val sendIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
         context.startActivity(sendIntent)
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Utils", "Failed to open camera app", e)
     }
 }
 
@@ -390,7 +396,7 @@ fun openAlarmApp(context: Context) {
         val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
         context.startActivity(intent)
     } catch (e: Exception) {
-        Log.d("TAG", e.toString())
+        Log.e("Utils", "Failed to open alarm app", e)
     }
 }
 
@@ -407,7 +413,7 @@ fun openCalendar(context: Context) {
             intent.addCategory(Intent.CATEGORY_APP_CALENDAR)
             context.startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("Utils", "Failed to open calendar", e)
         }
     }
 }
@@ -426,9 +432,7 @@ fun isAccessServiceEnabled(context: Context): Boolean {
 }
 
 fun isTablet(context: Context): Boolean {
-    val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val metrics = DisplayMetrics()
-    windowManager.defaultDisplay.getMetrics(metrics)
+    val metrics = context.resources.displayMetrics
     val widthInches = metrics.widthPixels / metrics.xdpi
     val heightInches = metrics.heightPixels / metrics.ydpi
     val diagonalInches = sqrt(widthInches.toDouble().pow(2.0) + heightInches.toDouble().pow(2.0))
@@ -462,7 +466,7 @@ fun Context.isSystemApp(packageName: String): Boolean {
         ((applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0)
                 || (applicationInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0))
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("Utils", "Failed to check if app is system app", e)
         false
     }
 }

@@ -12,6 +12,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import androidx.appcompat.app.AlertDialog
 import androidx.activity.OnBackPressedCallback
@@ -144,6 +145,17 @@ class MainActivity : AppCompatActivity() {
         setupOrientation()
 
         window.addFlags(FLAG_LAYOUT_NO_LIMITS)
+    }
+
+    override fun onDestroy() {
+        if (::appWidgetHost.isInitialized) {
+            try {
+                appWidgetHost.stopListening()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error stopping AppWidgetHost in onDestroy", e)
+            }
+        }
+        super.onDestroy()
     }
 
     override fun onStart() {

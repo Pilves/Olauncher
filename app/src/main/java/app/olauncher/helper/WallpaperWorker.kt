@@ -1,6 +1,7 @@
 package app.olauncher.helper
 
 import android.content.Context
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -28,10 +29,12 @@ class WallpaperWorker(appContext: Context, workerParams: WorkerParameters) : Cor
             } else
                 true
 
-        if (success)
+        if (success) {
             Result.success()
-        else
+        } else {
+            Log.w("WallpaperWorker", "Wallpaper update failed, retrying")
             Result.retry()
+        }
     }
 
     private fun checkWallpaperType(): String {

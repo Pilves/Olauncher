@@ -14,6 +14,7 @@ import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -421,7 +422,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             deviceManager.removeActiveAdmin(componentName) // for backward compatibility
             requireContext().showToast(toastMessage)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("SettingsFragment", "Failed to remove device admin", e)
         }
     }
 

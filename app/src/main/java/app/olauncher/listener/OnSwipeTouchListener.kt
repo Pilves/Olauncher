@@ -1,6 +1,7 @@
 package app.olauncher.listener
 
 import android.content.Context
+import android.util.Log
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
@@ -24,7 +25,8 @@ Source: https://www.tutorialspoint.com/how-to-handle-swipe-gestures-in-kotlin
 internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
     private var longPressOn = false
     private var longPressJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
+    private val parentJob = Job()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + parentJob)
     private val gestureDetector: GestureDetector
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
@@ -33,6 +35,10 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
             longPressJob?.cancel()
         }
         return gestureDetector.onTouchEvent(motionEvent)
+    }
+
+    fun cleanup() {
+        parentJob.cancel()
     }
 
     private inner class GestureListener : SimpleOnGestureListener() {
@@ -85,7 +91,7 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
                     }
                 }
             } catch (exception: Exception) {
-                exception.printStackTrace()
+                Log.e("Olauncher", "onFling error", exception)
             }
             return false
         }

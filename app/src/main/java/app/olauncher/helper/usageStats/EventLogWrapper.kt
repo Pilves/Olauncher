@@ -55,6 +55,10 @@ class EventLogWrapper(private val context: Context) {
 
         // Assumption: events are ordered chronologically
         val events = usageStatsManager.queryEvents(queryStart, end)
+        if (events == null) {
+            Log.w("EventLogWrapper", "queryEvents returned null for range $queryStart..$end")
+            return emptyList()
+        }
 
         /* …except that sometimes, the events that are close to each other are swapped in a way that
          * breaks the assumption that all end times which do not have a matching start time have

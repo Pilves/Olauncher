@@ -1,6 +1,7 @@
 package app.olauncher
 
 import android.app.Application
+import android.util.Log
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.LauncherApps
@@ -166,6 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setWallpaperWorker() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
             .build()
         val uploadWorkRequest = PeriodicWorkRequestBuilder<WallpaperWorker>(8, TimeUnit.HOURS)
             .setBackoffCriteria(BackoffPolicy.LINEAR, 1, TimeUnit.HOURS)
@@ -255,7 +257,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("MainViewModel", "Failed to set default clock app", e)
             }
         }
     }

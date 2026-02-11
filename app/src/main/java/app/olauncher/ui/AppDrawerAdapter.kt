@@ -2,6 +2,7 @@ package app.olauncher.ui
 
 import android.content.Context
 import android.os.UserHandle
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -78,7 +79,7 @@ class AppDrawerAdapter(
                 usageStats
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AppDrawerAdapter", "Error binding view holder", e)
         }
     }
 
@@ -107,7 +108,7 @@ class AppDrawerAdapter(
             @Suppress("UNCHECKED_CAST")
             override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
                 results?.values?.let {
-                    val items = it as MutableList<AppModel>
+                    val items = (it as? MutableList<AppModel>) ?: (it as? List<AppModel>)?.toMutableList() ?: return
                     appFilteredList = items
                     submitList(appFilteredList) {
                         autoLaunch()
@@ -126,7 +127,7 @@ class AppDrawerAdapter(
                 && appFilteredList.size > 0
             ) appClickListener(appFilteredList[0])
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AppDrawerAdapter", "Error during auto launch", e)
         }
     }
 
@@ -263,13 +264,15 @@ class AppDrawerAdapter(
                         appRenameListener(appModel, renameLabel)
                         renameLayout.visibility = View.GONE
                     } else {
-                        val packageManager = etAppRename.context.packageManager
-                        appRenameListener(
-                            appModel,
+                        val fallbackLabel = try {
+                            val packageManager = etAppRename.context.packageManager
                             packageManager.getApplicationLabel(
                                 packageManager.getApplicationInfo(appModel.appPackage, 0)
                             ).toString()
-                        )
+                        } catch (e: Exception) {
+                            appModel.appPackage
+                        }
+                        appRenameListener(appModel, fallbackLabel)
                         renameLayout.visibility = View.GONE
                     }
                 }
@@ -287,10 +290,14 @@ class AppDrawerAdapter(
             }
 
         private fun getAppName(context: Context, appPackage: String): String {
-            val packageManager = context.packageManager
-            return packageManager.getApplicationLabel(
-                packageManager.getApplicationInfo(appPackage, 0)
-            ).toString()
+            return try {
+                val packageManager = context.packageManager
+                packageManager.getApplicationLabel(
+                    packageManager.getApplicationInfo(appPackage, 0)
+                ).toString()
+            } catch (e: Exception) {
+                appPackage
+            }
         }
     }
 }

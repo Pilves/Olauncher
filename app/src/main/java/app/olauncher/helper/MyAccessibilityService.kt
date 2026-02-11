@@ -2,6 +2,7 @@ package app.olauncher.helper
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.util.Log
 import android.os.Build
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -29,6 +30,7 @@ class MyAccessibilityService : AccessibilityService() {
             )
                 performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
         } catch (e: Exception) {
+            Log.e("AccessibilityService", "Error handling accessibility event", e)
             return
         }
     }

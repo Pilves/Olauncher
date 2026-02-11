@@ -94,6 +94,10 @@ class Prefs(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_FILENAME, 0)
 
+    private var widgetHeightsCache: Map<Int, Int>? = null
+    private var widgetProvidersCache: Map<Int, String>? = null
+    private var usageStatsCache: Map<String, Long>? = null
+
     var firstOpen: Boolean
         get() = prefs.getBoolean(FIRST_OPEN, true)
         set(value) = prefs.edit { putBoolean(FIRST_OPEN, value) }
@@ -195,9 +199,10 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value) }
 
     fun getCachedUsageStats(): Map<String, Long> {
+        usageStatsCache?.let { return it }
         val raw = prefs.getString(CACHED_USAGE_STATS, "").toString()
         if (raw.isBlank()) return emptyMap()
-        return raw.split(",").mapNotNull { entry ->
+        val parsed = raw.split(",").mapNotNull { entry ->
             val sep = entry.indexOf('=')
             if (sep > 0) {
                 val pkg = entry.substring(0, sep)
@@ -205,9 +210,12 @@ class Prefs(context: Context) {
                 if (time != null) pkg to time else null
             } else null
         }.toMap()
+        usageStatsCache = parsed
+        return parsed
     }
 
     fun setCachedUsageStats(stats: Map<String, Long>) {
+        usageStatsCache = null
         prefs.edit {
             putString(CACHED_USAGE_STATS, stats.entries.joinToString(",") { "${it.key}=${it.value}" })
         }
@@ -240,7 +248,10 @@ class Prefs(context: Context) {
 
     private var widgetHeights: String
         get() = prefs.getString(WIDGET_HEIGHTS, "").toString()
-        set(value) = prefs.edit { putString(WIDGET_HEIGHTS, value) }
+        set(value) {
+            widgetHeightsCache = null
+            prefs.edit { putString(WIDGET_HEIGHTS, value) }
+        }
 
     fun getWidgetHeight(widgetId: Int): Int {
         val map = parseWidgetHeights()
@@ -254,9 +265,10 @@ class Prefs(context: Context) {
     }
 
     private fun parseWidgetHeights(): Map<Int, Int> {
+        widgetHeightsCache?.let { return it }
         val raw = widgetHeights
         if (raw.isBlank()) return emptyMap()
-        return raw.split(",").mapNotNull { entry ->
+        val parsed = raw.split(",").mapNotNull { entry ->
             val parts = entry.split(":")
             if (parts.size == 2) {
                 val id = parts[0].trim().toIntOrNull()
@@ -264,11 +276,16 @@ class Prefs(context: Context) {
                 if (id != null && h != null) id to h else null
             } else null
         }.toMap()
+        widgetHeightsCache = parsed
+        return parsed
     }
 
     private var widgetProviders: String
         get() = prefs.getString(WIDGET_PROVIDERS, "").toString()
-        set(value) = prefs.edit { putString(WIDGET_PROVIDERS, value) }
+        set(value) {
+            widgetProvidersCache = null
+            prefs.edit { putString(WIDGET_PROVIDERS, value) }
+        }
 
     fun getWidgetProvider(widgetId: Int): String? {
         val map = parseWidgetProviders()
@@ -290,9 +307,10 @@ class Prefs(context: Context) {
     fun getAllWidgetProviders(): Map<Int, String> = parseWidgetProviders()
 
     private fun parseWidgetProviders(): Map<Int, String> {
+        widgetProvidersCache?.let { return it }
         val raw = widgetProviders
         if (raw.isBlank()) return emptyMap()
-        return raw.split(",").mapNotNull { entry ->
+        val parsed = raw.split(",").mapNotNull { entry ->
             // Format: "id:component/class" — split only on first ':'
             val sep = entry.indexOf(':')
             if (sep > 0) {
@@ -301,6 +319,8 @@ class Prefs(context: Context) {
                 if (id != null && comp.isNotBlank()) id to comp else null
             } else null
         }.toMap()
+        widgetProvidersCache = parsed
+        return parsed
     }
 
     fun migrateWidgetIfNeeded() {

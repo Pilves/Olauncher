@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -23,6 +24,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.setPadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import app.olauncher.MainActivity
 import app.olauncher.MainViewModel
@@ -48,8 +50,11 @@ import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import java.text.SimpleDateFormat
-import java.util.Date
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener {
@@ -79,7 +84,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
-        restoreWidget()
+        viewLifecycleOwner.lifecycleScope.launch {
+            restoreWidget()
+        }
     }
 
     override fun onResume() {
@@ -103,7 +110,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                     val appLocation = view.tag.toString().toInt()
                     homeAppClicked(appLocation)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("HomeFragment", "Failed to launch app", e)
                 }
             }
         }
@@ -239,9 +246,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         binding.clock.isVisible = Constants.DateTime.isTimeVisible(prefs.dateTimeVisibility)
         binding.date.isVisible = Constants.DateTime.isDateVisible(prefs.dateTimeVisibility)
 
-//        var dateText = SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date())
-        val dateFormat = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
-        var dateText = dateFormat.format(Date())
+        val formatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())
+        var dateText = LocalDate.now().format(formatter)
 
         if (!prefs.showStatusBar) {
             val battery = (requireContext().getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
@@ -249,7 +255,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             if (battery > 0)
                 dateText = getString(R.string.day_battery, dateText, battery)
         }
-        binding.date.text = dateText.replace(".,", ",")
+        val displayDate = dateText.replace(".,", ",")
+        binding.date.text = displayDate
+        binding.date.contentDescription = displayDate
+        binding.clock.contentDescription = binding.clock.text
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -277,10 +286,12 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             val slot = i + 1
             val view = homeAppViews[i]
             view.visibility = View.VISIBLE
-            if (!setHomeAppText(view, prefs.getHomeAppName(slot), prefs.getHomeAppPackage(slot), prefs.getHomeAppUser(slot))) {
+            val appName = prefs.getHomeAppName(slot)
+            if (!setHomeAppText(view, appName, prefs.getHomeAppPackage(slot), prefs.getHomeAppUser(slot))) {
                 prefs.setHomeAppName(slot, "")
                 prefs.setHomeAppPackage(slot, "")
             }
+            view.contentDescription = appName.ifEmpty { getString(R.string.long_press_to_select_app) }
         }
     }
 
@@ -346,7 +357,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                     Constants.Key.RENAME to rename
                 )
             )
-            e.printStackTrace()
+            Log.e("HomeFragment", "Navigation to app list failed, using fallback", e)
         }
     }
 
@@ -406,7 +417,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             flashlightOn = !flashlightOn
             cameraManager.setTorchMode(cameraId, flashlightOn)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("HomeFragment", "Failed to toggle flashlight", e)
         }
     }
 
@@ -465,7 +476,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             )
             startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("HomeFragment", "Failed to open Digital Wellbeing", e)
             try {
                 intent.setClassName(
                     Constants.DIGITAL_WELLBEING_SAMSUNG_PACKAGE_NAME,
@@ -473,7 +484,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 )
                 startActivity(intent)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("HomeFragment", "Failed to open Samsung Digital Wellbeing", e)
             }
         }
     }
@@ -511,7 +522,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 try {
                     showHomeLongPressMenu()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("HomeFragment", "Failed to show home long press menu", e)
                 }
             }
 
@@ -586,54 +597,66 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private var flashlightOn: Boolean = false
     private var pendingSwapIndex: Int = -1
 
-    private fun getActiveContainer(): android.widget.LinearLayout {
+    private fun getActiveContainer(): android.widget.LinearLayout? {
         return if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
-            binding.widgetContainerAbove!!
+            binding.widgetContainerAbove
         else
-            binding.widgetContainerBelow!!
+            binding.widgetContainerBelow
     }
 
-    private fun getActiveScrollView(): android.widget.ScrollView {
+    private fun getActiveScrollView(): android.widget.ScrollView? {
         return if (prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE)
-            binding.widgetScrollViewAbove!!
+            binding.widgetScrollViewAbove
         else
-            binding.widgetScrollViewBelow!!
+            binding.widgetScrollViewBelow
     }
 
     // Queue of (oldWidgetId, providerComponentString) for widgets that need rebinding with permission
     private val widgetRestoreQueue = mutableListOf<Pair<Int, String>>()
 
-    private fun restoreWidget() {
+    private suspend fun restoreWidget() {
         prefs.migrateWidgetIfNeeded()
         val ids = prefs.getWidgetIdList()
         if (ids.isEmpty()) return
 
         val mainActivity = requireActivity() as MainActivity
-        val validIds = mutableListOf<Int>()
         val savedProviders = prefs.getAllWidgetProviders()
         widgetRestoreQueue.clear()
 
-        for (wid in ids) {
-            try {
-                val info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+        // Gather widget info on background thread
+        data class WidgetRestoreInfo(val wid: Int, val info: AppWidgetProviderInfo?, val providerStr: String?)
+        val restoreInfoList = withContext(Dispatchers.Default) {
+            ids.map { wid ->
+                val info = try {
+                    mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+                } catch (e: Exception) {
+                    Log.e("HomeFragment", "restoreWidget: failed to get info for id=$wid", e)
+                    null
+                }
+                WidgetRestoreInfo(wid, info, savedProviders[wid])
+            }
+        }
 
-                if (info != null) {
+        // Process results on main thread
+        val validIds = mutableListOf<Int>()
+        for (restoreInfo in restoreInfoList) {
+            try {
+                if (restoreInfo.info != null) {
                     // Widget still valid
                     val hostView = mainActivity.appWidgetHost.createView(
-                        requireContext().applicationContext, wid, info
+                        requireContext().applicationContext, restoreInfo.wid, restoreInfo.info
                     )
-                    addWidgetToContainer(hostView, wid)
-                    validIds.add(wid)
+                    addWidgetToContainer(hostView, restoreInfo.wid)
+                    validIds.add(restoreInfo.wid)
                 } else {
                     // Widget invalidated — queue for rebind if we know the provider
-                    mainActivity.appWidgetHost.deleteAppWidgetId(wid)
-                    val providerStr = savedProviders[wid]
-                    if (providerStr != null) {
-                        widgetRestoreQueue.add(wid to providerStr)
+                    mainActivity.appWidgetHost.deleteAppWidgetId(restoreInfo.wid)
+                    if (restoreInfo.providerStr != null) {
+                        widgetRestoreQueue.add(restoreInfo.wid to restoreInfo.providerStr)
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("HomeFragment", "restoreWidget failed for id=$wid", e)
+                Log.e("HomeFragment", "restoreWidget failed for id=${restoreInfo.wid}", e)
             }
         }
         prefs.setWidgetIdList(validIds)
@@ -713,8 +736,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun addWidgetToContainer(hostView: android.appwidget.AppWidgetHostView, widgetId: Int) {
-        val container = getActiveContainer()
-        val scrollView = getActiveScrollView()
+        val container = getActiveContainer() ?: return
+        val scrollView = getActiveScrollView() ?: return
 
         scrollView.layoutParams = (scrollView.layoutParams as android.widget.LinearLayout.LayoutParams).apply {
             height = android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
@@ -767,6 +790,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
+            contentDescription = "Widget"
             setOnTouchListener { _, event ->
                 gestureDetector.onTouchEvent(event)
                 true
@@ -809,7 +833,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun resizeWidgetWrappers() {
-        val container = getActiveContainer()
+        val container = getActiveContainer() ?: return
         val count = container.childCount
         if (count == 0) return
 
@@ -905,9 +929,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun rebuildWidgetContainer() {
-        val container = getActiveContainer()
+        val container = getActiveContainer() ?: return
         container.removeAllViews()
-        val scrollView = getActiveScrollView()
+        val scrollView = getActiveScrollView() ?: return
         scrollView.visibility = View.GONE
 
         val ids = prefs.getWidgetIdList()
@@ -925,7 +949,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 addWidgetToContainer(hostView, wid)
                 validIds.add(wid)
             } catch (e: Exception) {
-                android.util.Log.e("HomeFragment", "rebuildWidget failed for id=$wid", e)
+                Log.e("HomeFragment", "rebuildWidget failed for id=$wid", e)
             }
         }
         prefs.setWidgetIdList(validIds)
@@ -942,7 +966,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         prefs.setWidgetIdList(ids)
 
         // Remove from container
-        val container = getActiveContainer()
+        val container = getActiveContainer() ?: return
         for (i in 0 until container.childCount) {
             if (container.getChildAt(i).tag == widgetId) {
                 container.removeViewAt(i)
@@ -1092,7 +1116,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 val capturedReplaceIndex = replaceIndex
                 mainActivity.onWidgetBindResult = { success ->
                     if (success) {
-                        onWidgetBound(mainActivity.pendingWidgetId, mainActivity.pendingWidgetInfo!!, capturedReplaceIndex)
+                        mainActivity.pendingWidgetInfo?.let { widgetInfo ->
+                            onWidgetBound(mainActivity.pendingWidgetId, widgetInfo, capturedReplaceIndex)
+                        }
                     } else {
                         mainActivity.appWidgetHost.deleteAppWidgetId(mainActivity.pendingWidgetId)
                         requireContext().showToast(getString(R.string.widget_bind_permission_denied))
@@ -1105,7 +1131,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 mainActivity.bindWidgetLauncher.launch(intent)
             }
         } catch (e: Exception) {
-            android.util.Log.e("HomeFragment", "bindWidget failed", e)
+            Log.e("HomeFragment", "bindWidget failed", e)
             requireContext().showToast(getString(R.string.couldnt_bind_widget, e.message))
         }
     }
@@ -1137,7 +1163,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 finishWidgetSetup(widgetId, providerInfo, replaceIndex)
             }
         } catch (e: Exception) {
-            android.util.Log.e("HomeFragment", "onWidgetBound failed", e)
+            Log.e("HomeFragment", "onWidgetBound failed", e)
             requireContext().showToast(getString(R.string.widget_setup_failed, e.message))
         }
     }
@@ -1162,7 +1188,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
             rebuildWidgetContainer()
         } catch (e: Exception) {
-            android.util.Log.e("HomeFragment", "finishWidgetSetup failed", e)
+            Log.e("HomeFragment", "finishWidgetSetup failed", e)
             requireContext().showToast(getString(R.string.couldnt_add_widget, e.message))
         }
     }

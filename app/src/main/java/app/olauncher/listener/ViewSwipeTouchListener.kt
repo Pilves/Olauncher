@@ -1,6 +1,7 @@
 package app.olauncher.listener
 
 import android.content.Context
+import android.util.Log
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
@@ -19,7 +20,8 @@ import kotlin.math.abs
 internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListener {
     private var longPressOn = false
     private var longPressJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
+    private val parentJob = Job()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + parentJob)
     private val gestureDetector: GestureDetector
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
@@ -34,6 +36,10 @@ internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListen
         return gestureDetector.onTouchEvent(motionEvent)
     }
 
+    fun cleanup() {
+        parentJob.cancel()
+    }
+
     private inner class GestureListener(private val view: View) : SimpleOnGestureListener() {
         private val SWIPE_THRESHOLD: Int = 100
         private val SWIPE_VELOCITY_THRESHOLD: Int = 100
@@ -45,11 +51,6 @@ internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListen
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             onClick(view)
             return super.onSingleTapUp(e)
-        }
-
-        override fun onDoubleTap(e: MotionEvent): Boolean {
-            onDoubleClick()
-            return super.onDoubleTap(e)
         }
 
         override fun onLongPress(e: MotionEvent) {
@@ -84,7 +85,7 @@ internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListen
                     }
                 }
             } catch (exception: Exception) {
-                exception.printStackTrace()
+                Log.e("Olauncher", "onFling error", exception)
             }
             return false
         }
@@ -95,7 +96,6 @@ internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListen
     open fun onSwipeUp() {}
     open fun onSwipeDown() {}
     open fun onLongClick(view: View) {}
-    private fun onDoubleClick() {}
     open fun onClick(view: View) {}
 
     init {

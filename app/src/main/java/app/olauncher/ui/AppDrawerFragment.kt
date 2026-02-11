@@ -1,6 +1,7 @@
 package app.olauncher.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -76,7 +77,7 @@ class AppDrawerFragment : Fragment() {
             val searchTextView = binding.search.findViewById<TextView>(R.id.search_src_text)
             if (searchTextView != null) searchTextView.gravity = prefs.appLabelAlignment
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AppDrawerFragment", "Failed to set search text alignment", e)
         }
     }
 
@@ -94,12 +95,19 @@ class AppDrawerFragment : Fragment() {
 
             override fun onQueryTextChange(newText: String): Boolean {
                 try {
-                    adapter.filter.filter(newText)
-                    binding.appDrawerTip.visibility = View.GONE
+                    adapter.filter.filter(newText) {
+                        // Show empty state when search returns no results
+                        if (adapter.itemCount == 0 && newText.isNotBlank()) {
+                            binding.appDrawerTip.text = getString(R.string.no_apps_found)
+                            binding.appDrawerTip.visibility = View.VISIBLE
+                        } else {
+                            binding.appDrawerTip.visibility = View.GONE
+                        }
+                    }
                     binding.appRename.visibility = if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
                     return true
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("AppDrawerFragment", "Error filtering app list", e)
                 }
                 return false
             }
