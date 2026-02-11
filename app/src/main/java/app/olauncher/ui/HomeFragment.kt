@@ -859,8 +859,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
 
         val dialog = BottomSheetDialog(requireContext())
+        val bgColor = requireContext().getColorFromAttr(R.attr.primaryInverseColor)
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(bgColor)
         }
         val searchField = android.widget.EditText(requireContext()).apply {
             hint = getString(R.string.search_widgets)
