@@ -195,6 +195,17 @@ class AppDrawerFragment : Fragment() {
                 binding.appDrawerTip.isSelected = true
             }
         }
+        val wantSortByUsage = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+                && requireContext().appUsagePermissionGranted()
+                && prefs.appDrawerSortByUsage
+        adapter.sortByUsage = wantSortByUsage
+
+        // Load cached usage stats immediately so sort works on first render
+        if (wantSortByUsage) {
+            val cached = prefs.getCachedUsageStats()
+            if (cached.isNotEmpty()) adapter.usageStats = cached
+        }
+
         if (flag == Constants.FLAG_HIDDEN_APPS) {
             viewModel.hiddenApps.observe(viewLifecycleOwner) {
                 it?.let {
@@ -212,11 +223,10 @@ class AppDrawerFragment : Fragment() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
             && requireContext().appUsagePermissionGranted()
         ) {
-            adapter.sortByUsage = prefs.appDrawerSortByUsage
             viewModel.perAppScreenTime.observe(viewLifecycleOwner) { stats ->
                 adapter.usageStats = stats
-                if (adapter.sortByUsage) adapter.filter.filter(binding.search.query)
-                else adapter.notifyDataSetChanged()
+                prefs.setCachedUsageStats(stats)
+                adapter.filter.filter(binding.search.query)
             }
             viewModel.getPerAppScreenTime()
         }

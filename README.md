@@ -7,9 +7,12 @@ A minimal, text-based Android launcher. Forked from [tanujnotes/Olauncher](https
 ### Multi-widget support
 - Add multiple widgets to your home screen (long-press > Add widget)
 - Swap, remove, resize, or reorder widgets (long-press on a widget)
-- Per-widget height control: Small (100dp), Medium (200dp), Large (300dp)
+- Per-widget height control: Small (100dp), Medium (200dp), Large (300dp), Extra large (400dp), Full (500dp)
 - Choose widget placement: above or below your app list (in Settings)
 - Search/filter in the widget picker to quickly find widgets
+- Widget picker opens full-screen and stays above the keyboard
+- Long-press works on all widgets, including ones with tappable areas (e.g. Spotify)
+- Widget providers saved for automatic restore after reinstall
 
 ### Custom gestures
 - Swipe left and right can be mapped to different actions, not just apps
@@ -19,6 +22,7 @@ A minimal, text-based Android launcher. Forked from [tanujnotes/Olauncher](https
 ### Per-app screen time in app drawer
 - Daily usage time shown next to each app in the drawer
 - Sort apps by usage time (toggle in Settings, requires usage permission)
+- Usage-sorted order cached for instant display on drawer open
 - Requires usage access permission (same as the home screen total)
 
 ### Settings backup & restore

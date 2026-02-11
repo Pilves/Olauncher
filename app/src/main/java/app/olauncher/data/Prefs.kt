@@ -40,6 +40,7 @@ class Prefs(context: Context) {
     private val WIDGET_HEIGHTS = "WIDGET_HEIGHTS"
     private val WIDGET_PROVIDERS = "WIDGET_PROVIDERS"
     private val APP_DRAWER_SORT_BY_USAGE = "APP_DRAWER_SORT_BY_USAGE"
+    private val CACHED_USAGE_STATS = "CACHED_USAGE_STATS"
     private val SWIPE_LEFT_ACTION = "SWIPE_LEFT_ACTION"
     private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
 
@@ -192,6 +193,25 @@ class Prefs(context: Context) {
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
         set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value).apply() }
+
+    fun getCachedUsageStats(): Map<String, Long> {
+        val raw = prefs.getString(CACHED_USAGE_STATS, "").toString()
+        if (raw.isBlank()) return emptyMap()
+        return raw.split(",").mapNotNull { entry ->
+            val sep = entry.indexOf('=')
+            if (sep > 0) {
+                val pkg = entry.substring(0, sep)
+                val time = entry.substring(sep + 1).toLongOrNull()
+                if (time != null) pkg to time else null
+            } else null
+        }.toMap()
+    }
+
+    fun setCachedUsageStats(stats: Map<String, Long>) {
+        prefs.edit {
+            putString(CACHED_USAGE_STATS, stats.entries.joinToString(",") { "${it.key}=${it.value}" }).apply()
+        }
+    }
 
     // -1 means "not set" → fall back to OPEN_APP (backward compatible with existing swipe app prefs)
     var swipeLeftAction: Int

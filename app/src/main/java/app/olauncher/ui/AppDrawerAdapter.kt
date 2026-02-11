@@ -139,8 +139,13 @@ class AppDrawerAdapter(
         // Add empty app for bottom padding in recyclerview
         appsList.add(AppModel("", null, "", "", false, android.os.Process.myUserHandle()))
         this.appsList = appsList
-        this.appFilteredList = appsList
-        submitList(appsList)
+        if (sortByUsage && usageStats.isNotEmpty()) {
+            // Apply sort immediately via the filter
+            filter.filter("")
+        } else {
+            this.appFilteredList = appsList
+            submitList(appsList)
+        }
     }
 
     fun launchFirstInList() {

@@ -600,6 +600,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             binding.widgetScrollViewBelow!!
     }
 
+    // Queue of (oldWidgetId, providerComponentString) for widgets that need rebinding with permission
+    private val widgetRestoreQueue = mutableListOf<Pair<Int, String>>()
+
     private fun restoreWidget() {
         prefs.migrateWidgetIfNeeded()
         val ids = prefs.getWidgetIdList()
@@ -608,52 +611,105 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val mainActivity = requireActivity() as MainActivity
         val validIds = mutableListOf<Int>()
         val savedProviders = prefs.getAllWidgetProviders()
+        widgetRestoreQueue.clear()
 
         for (wid in ids) {
             try {
-                var info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
-                var activeId = wid
+                val info = mainActivity.appWidgetManager.getAppWidgetInfo(wid)
 
-                if (info == null) {
-                    // Widget ID invalidated (e.g. after reinstall) — try to re-bind from saved provider
+                if (info != null) {
+                    // Widget still valid
+                    val hostView = mainActivity.appWidgetHost.createView(
+                        requireContext().applicationContext, wid, info
+                    )
+                    addWidgetToContainer(hostView, wid)
+                    validIds.add(wid)
+                } else {
+                    // Widget invalidated — queue for rebind if we know the provider
                     mainActivity.appWidgetHost.deleteAppWidgetId(wid)
                     val providerStr = savedProviders[wid]
                     if (providerStr != null) {
-                        val component = android.content.ComponentName.unflattenFromString(providerStr)
-                        if (component != null) {
-                            val newId = mainActivity.appWidgetHost.allocateAppWidgetId()
-                            val bound = mainActivity.appWidgetManager.bindAppWidgetIdIfAllowed(newId, component)
-                            if (bound) {
-                                info = mainActivity.appWidgetManager.getAppWidgetInfo(newId)
-                                if (info != null) {
-                                    activeId = newId
-                                    // Migrate height and provider to new ID
-                                    val height = prefs.getWidgetHeight(wid)
-                                    prefs.setWidgetHeight(newId, height)
-                                    prefs.setWidgetProvider(newId, providerStr)
-                                } else {
-                                    mainActivity.appWidgetHost.deleteAppWidgetId(newId)
-                                }
-                            } else {
-                                mainActivity.appWidgetHost.deleteAppWidgetId(newId)
-                            }
-                        }
+                        widgetRestoreQueue.add(wid to providerStr)
                     }
-                    prefs.removeWidgetProvider(wid)
-                    if (info == null) continue
                 }
-
-                val hostView = mainActivity.appWidgetHost.createView(
-                    requireContext().applicationContext, activeId, info
-                )
-                addWidgetToContainer(hostView, activeId)
-                validIds.add(activeId)
             } catch (e: Exception) {
                 android.util.Log.e("HomeFragment", "restoreWidget failed for id=$wid", e)
             }
         }
         prefs.setWidgetIdList(validIds)
         updateWidgetContainerVisibility()
+
+        // Process queued widgets that need permission-based rebinding
+        if (widgetRestoreQueue.isNotEmpty()) {
+            processNextWidgetRestore()
+        }
+    }
+
+    private fun processNextWidgetRestore() {
+        if (widgetRestoreQueue.isEmpty()) return
+        val (oldId, providerStr) = widgetRestoreQueue.removeAt(0)
+        val component = android.content.ComponentName.unflattenFromString(providerStr)
+        if (component == null) {
+            prefs.removeWidgetProvider(oldId)
+            processNextWidgetRestore()
+            return
+        }
+
+        val mainActivity = requireActivity() as MainActivity
+        val newId = mainActivity.appWidgetHost.allocateAppWidgetId()
+
+        // Try silent bind first (works if app has system permission)
+        if (mainActivity.appWidgetManager.bindAppWidgetIdIfAllowed(newId, component)) {
+            completeWidgetRestore(oldId, newId, providerStr)
+            return
+        }
+
+        // Need user permission — launch bind dialog
+        mainActivity.pendingWidgetId = newId
+        mainActivity.onWidgetBindResult = { success ->
+            if (success) {
+                completeWidgetRestore(oldId, newId, providerStr)
+            } else {
+                mainActivity.appWidgetHost.deleteAppWidgetId(newId)
+                prefs.removeWidgetProvider(oldId)
+                processNextWidgetRestore()
+            }
+        }
+        val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newId)
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, component)
+        }
+        mainActivity.bindWidgetLauncher.launch(intent)
+    }
+
+    private fun completeWidgetRestore(oldId: Int, newId: Int, providerStr: String) {
+        val mainActivity = requireActivity() as MainActivity
+        val info = mainActivity.appWidgetManager.getAppWidgetInfo(newId)
+        if (info == null) {
+            mainActivity.appWidgetHost.deleteAppWidgetId(newId)
+            prefs.removeWidgetProvider(oldId)
+            processNextWidgetRestore()
+            return
+        }
+
+        // Migrate saved height and provider to new ID
+        val height = prefs.getWidgetHeight(oldId)
+        prefs.setWidgetHeight(newId, height)
+        prefs.setWidgetProvider(newId, providerStr)
+        prefs.removeWidgetProvider(oldId)
+
+        // Add to container and update ID list
+        val hostView = mainActivity.appWidgetHost.createView(
+            requireContext().applicationContext, newId, info
+        )
+        addWidgetToContainer(hostView, newId)
+        val ids = prefs.getWidgetIdList()
+        ids.add(newId)
+        prefs.setWidgetIdList(ids)
+        updateWidgetContainerVisibility()
+
+        // Process next queued widget
+        processNextWidgetRestore()
     }
 
     private fun addWidgetToContainer(hostView: android.appwidget.AppWidgetHostView, widgetId: Int) {
@@ -683,10 +739,40 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         )
         wrapper.addView(hostView)
 
-        wrapper.setOnLongClickListener {
-            showWidgetOptionsDialog(widgetId)
-            true
+        // Invisible overlay to capture long-press even on tappable widgets (e.g. Spotify)
+        val gestureDetector = android.view.GestureDetector(requireContext(),
+            object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: android.view.MotionEvent) {
+                    showWidgetOptionsDialog(widgetId)
+                }
+                override fun onSingleTapUp(e: android.view.MotionEvent): Boolean {
+                    // Forward tap to widget underneath
+                    val down = android.view.MotionEvent.obtain(
+                        e.downTime, e.eventTime,
+                        android.view.MotionEvent.ACTION_DOWN, e.x, e.y, 0
+                    )
+                    hostView.dispatchTouchEvent(down)
+                    down.recycle()
+                    val up = android.view.MotionEvent.obtain(
+                        e.downTime, e.eventTime,
+                        android.view.MotionEvent.ACTION_UP, e.x, e.y, 0
+                    )
+                    hostView.dispatchTouchEvent(up)
+                    up.recycle()
+                    return true
+                }
+            })
+        val overlay = View(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setOnTouchListener { _, event ->
+                gestureDetector.onTouchEvent(event)
+                true
+            }
         }
+        wrapper.addView(overlay)
 
         container.addView(wrapper)
 
@@ -981,7 +1067,12 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             1f
         ))
         dialog.setContentView(container)
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         dialog.show()
+
+        // Expand to full height so search + list stay visible above keyboard
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.skipCollapsed = true
     }
 
     private fun bindWidget(providerInfo: AppWidgetProviderInfo, replaceIndex: Int = -1) {
