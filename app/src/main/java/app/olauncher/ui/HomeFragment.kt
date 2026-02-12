@@ -364,49 +364,63 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             }
         }
 
-        // Dynamic fitting: hide apps that overflow after layout
+        // Dynamic fitting: adjust padding to clear date/time, then hide overflow apps
         if (homeAppsNum > 0) {
             binding.homeAppsLayout.post {
                 if (!isAdded || _binding == null) return@post
                 val layout = binding.homeAppsLayout
-                val availableHeight = layout.height - layout.paddingTop - layout.paddingBottom
-                if (availableHeight <= 0) return@post
 
-                // Subtract widget container height
-                val widgetHeight = when {
-                    prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE ->
-                        binding.widgetScrollViewAbove?.let { if (it.isVisible) it.height else 0 } ?: 0
-                    else ->
-                        binding.widgetScrollViewBelow?.let { if (it.isVisible) it.height else 0 } ?: 0
+                // Adjust top padding to clear the dateTimeLayout
+                val dtLayout = binding.dateTimeLayout
+                val minTopPadding = if (dtLayout.isVisible) {
+                    (dtLayout.top + dtLayout.height + (8 * resources.displayMetrics.density).toInt())
+                } else {
+                    (56 * resources.displayMetrics.density).toInt()
                 }
-                // Subtract date/time layout height
-                val dateTimeHeight = if (binding.dateTimeLayout.isVisible) binding.dateTimeLayout.height else 0
-                val screenTimeHeight = if (binding.tvScreenTime.isVisible) binding.tvScreenTime.height else 0
+                if (layout.paddingTop != minTopPadding) {
+                    layout.setPadding(layout.paddingLeft, minTopPadding, layout.paddingRight, layout.paddingBottom)
+                }
 
-                val usableHeight = availableHeight - widgetHeight - dateTimeHeight - screenTimeHeight
-                if (usableHeight <= 0) return@post
+                // Run fitting after the padding change has been laid out
+                layout.post fitApps@{
+                    if (!isAdded || _binding == null) return@fitApps
 
-                // Measure height of a single app view
-                val firstVisible = homeAppViews.firstOrNull { it.isVisible }
-                val singleAppHeight = firstVisible?.height ?: return@post
-                if (singleAppHeight <= 0) return@post
+                    val availableHeight = layout.height - layout.paddingTop - layout.paddingBottom
+                    if (availableHeight <= 0) return@fitApps
 
-                val maxFitting = usableHeight / singleAppHeight
-                if (maxFitting < homeAppsNum) {
-                    // Hide excess apps from the bottom, but keep Quick Note at last visible slot
-                    for (j in homeAppViews.indices.reversed()) {
-                        if (j >= maxFitting && homeAppViews[j].isVisible) {
-                            homeAppViews[j].visibility = View.GONE
-                        }
+                    // Subtract widget container height
+                    val widgetHeight = when {
+                        prefs.widgetPlacement == Constants.WidgetPlacement.ABOVE ->
+                            binding.widgetScrollViewAbove?.let { if (it.isVisible) it.height else 0 } ?: 0
+                        else ->
+                            binding.widgetScrollViewBelow?.let { if (it.isVisible) it.height else 0 } ?: 0
                     }
-                    // If note is enabled, ensure it shows at the last visible slot
-                    if (noteEnabled && maxFitting > 0) {
-                        val ctx = context ?: return@post
-                        val noteView = homeAppViews[maxFitting - 1]
-                        noteView.visibility = View.VISIBLE
-                        noteView.text = QuickNoteManager.getPreviewText(ctx)
-                        noteView.contentDescription = getString(R.string.quick_note)
-                        noteView.setCompoundDrawablesRelative(null, null, null, null)
+
+                    val usableHeight = availableHeight - widgetHeight
+                    if (usableHeight <= 0) return@fitApps
+
+                    // Measure height of a single app view
+                    val firstVisible = homeAppViews.firstOrNull { it.isVisible }
+                    val singleAppHeight = firstVisible?.height ?: return@fitApps
+                    if (singleAppHeight <= 0) return@fitApps
+
+                    val maxFitting = usableHeight / singleAppHeight
+                    if (maxFitting < homeAppsNum) {
+                        // Hide excess apps from the bottom, but keep Quick Note at last visible slot
+                        for (j in homeAppViews.indices.reversed()) {
+                            if (j >= maxFitting && homeAppViews[j].isVisible) {
+                                homeAppViews[j].visibility = View.GONE
+                            }
+                        }
+                        // If note is enabled, ensure it shows at the last visible slot
+                        if (noteEnabled && maxFitting > 0) {
+                            val ctx = context ?: return@fitApps
+                            val noteView = homeAppViews[maxFitting - 1]
+                            noteView.visibility = View.VISIBLE
+                            noteView.text = QuickNoteManager.getPreviewText(ctx)
+                            noteView.contentDescription = getString(R.string.quick_note)
+                            noteView.setCompoundDrawablesRelative(null, null, null, null)
+                        }
                     }
                 }
             }
@@ -1232,57 +1246,67 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     // Queue of (oldWidgetId, providerComponentString) for widgets that need rebinding with permission
     private val widgetRestoreQueue = mutableListOf<Pair<Int, String>>()
+    private var isRestoringWidgets = false
 
     private suspend fun restoreWidget() {
-        val mainActivity = mainActivityOrNull ?: return
-        prefs.migrateWidgetIfNeeded(mainActivity.appWidgetManager)
-        val ids = prefs.getWidgetIdList()
-        if (ids.isEmpty()) return
-        val savedProviders = prefs.getAllWidgetProviders()
-        widgetRestoreQueue.clear()
+        if (isRestoringWidgets) return
+        isRestoringWidgets = true
+        try {
+            val mainActivity = mainActivityOrNull ?: return
+            prefs.migrateWidgetIfNeeded(mainActivity.appWidgetManager)
+            val ids = prefs.getWidgetIdList()
+            if (ids.isEmpty()) return
+            val savedProviders = prefs.getAllWidgetProviders()
+            widgetRestoreQueue.clear()
 
-        // Gather widget info on background thread
-        data class WidgetRestoreInfo(val wid: Int, val info: AppWidgetProviderInfo?, val providerStr: String?)
-        val restoreInfoList = withContext(Dispatchers.IO) {
-            ids.map { wid ->
-                val info = try {
-                    mainActivity.appWidgetManager.getAppWidgetInfo(wid)
-                } catch (e: Exception) {
-                    Log.e("HomeFragment", "restoreWidget: failed to get info for id=$wid", e)
-                    null
-                }
-                WidgetRestoreInfo(wid, info, savedProviders[wid])
-            }
-        }
+            // Clear existing widget views to prevent duplicates
+            getActiveContainer()?.removeAllViews()
 
-        // Process results on main thread
-        val validIds = mutableListOf<Int>()
-        for (restoreInfo in restoreInfoList) {
-            try {
-                if (restoreInfo.info != null) {
-                    // Widget still valid
-                    val hostView = mainActivity.appWidgetHost.createView(
-                        requireContext().applicationContext, restoreInfo.wid, restoreInfo.info
-                    )
-                    addWidgetToContainer(hostView, restoreInfo.wid)
-                    validIds.add(restoreInfo.wid)
-                } else {
-                    // Widget invalidated — queue for rebind if we know the provider
-                    mainActivity.appWidgetHost.deleteAppWidgetId(restoreInfo.wid)
-                    if (restoreInfo.providerStr != null) {
-                        widgetRestoreQueue.add(restoreInfo.wid to restoreInfo.providerStr)
+            // Gather widget info on background thread
+            data class WidgetRestoreInfo(val wid: Int, val info: AppWidgetProviderInfo?, val providerStr: String?)
+            val restoreInfoList = withContext(Dispatchers.IO) {
+                ids.map { wid ->
+                    val info = try {
+                        mainActivity.appWidgetManager.getAppWidgetInfo(wid)
+                    } catch (e: Exception) {
+                        Log.e("HomeFragment", "restoreWidget: failed to get info for id=$wid", e)
+                        null
                     }
+                    WidgetRestoreInfo(wid, info, savedProviders[wid])
                 }
-            } catch (e: Exception) {
-                Log.e("HomeFragment", "restoreWidget failed for id=${restoreInfo.wid}", e)
             }
-        }
-        prefs.setWidgetIdList(validIds)
-        updateWidgetContainerVisibility()
 
-        // Process queued widgets that need permission-based rebinding
-        if (widgetRestoreQueue.isNotEmpty()) {
-            processNextWidgetRestore()
+            // Process results on main thread
+            val validIds = mutableListOf<Int>()
+            for (restoreInfo in restoreInfoList) {
+                try {
+                    if (restoreInfo.info != null) {
+                        // Widget still valid
+                        val hostView = mainActivity.appWidgetHost.createView(
+                            requireContext().applicationContext, restoreInfo.wid, restoreInfo.info
+                        )
+                        addWidgetToContainer(hostView, restoreInfo.wid)
+                        validIds.add(restoreInfo.wid)
+                    } else {
+                        // Widget invalidated — queue for rebind if we know the provider
+                        mainActivity.appWidgetHost.deleteAppWidgetId(restoreInfo.wid)
+                        if (restoreInfo.providerStr != null) {
+                            widgetRestoreQueue.add(restoreInfo.wid to restoreInfo.providerStr)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("HomeFragment", "restoreWidget failed for id=${restoreInfo.wid}", e)
+                }
+            }
+            prefs.setWidgetIdList(validIds)
+            updateWidgetContainerVisibility()
+
+            // Process queued widgets that need permission-based rebinding
+            if (widgetRestoreQueue.isNotEmpty()) {
+                processNextWidgetRestore()
+            }
+        } finally {
+            isRestoringWidgets = false
         }
     }
 
