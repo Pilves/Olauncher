@@ -145,9 +145,7 @@ class AppDrawerFragment : Fragment() {
                 }
             },
             appHideListener = { appModel, position ->
-                adapter.appFilteredList.removeAt(position)
-                adapter.notifyItemRemoved(position)
-                adapter.appsList.remove(appModel)
+                adapter.removeApp(position)
 
                 val newSet = mutableSetOf<String>()
                 newSet.addAll(prefs.hiddenApps)
@@ -185,7 +183,8 @@ class AppDrawerFragment : Fragment() {
             ): Int {
                 val scrollRange = super.scrollVerticallyBy(dx, recycler, state)
                 val overScroll = dx - scrollRange
-                if (overScroll < -10 && binding.recyclerView.scrollState == RecyclerView.SCROLL_STATE_DRAGGING)
+                val rv = _binding?.recyclerView ?: return scrollRange
+                if (overScroll < -10 && rv.scrollState == RecyclerView.SCROLL_STATE_DRAGGING)
                     checkMessageAndExit()
                 return scrollRange
             }
@@ -276,15 +275,15 @@ class AppDrawerFragment : Fragment() {
                     RecyclerView.SCROLL_STATE_DRAGGING -> {
                         onTop = !recyclerView.canScrollVertically(-1)
                         if (onTop)
-                            binding.search.hideKeyboard()
+                            _binding?.search?.hideKeyboard()
                     }
 
                     RecyclerView.SCROLL_STATE_IDLE -> {
                         if (!recyclerView.canScrollVertically(1))
-                            binding.search.hideKeyboard()
+                            _binding?.search?.hideKeyboard()
                         else if (!recyclerView.canScrollVertically(-1))
                             if (!onTop && isRemoving.not())
-                                binding.search.showKeyboard(prefs.autoShowKeyboard)
+                                _binding?.search?.showKeyboard(prefs.autoShowKeyboard)
                     }
                 }
             }
@@ -301,7 +300,7 @@ class AppDrawerFragment : Fragment() {
     }
 
     override fun onStop() {
-        binding.search.hideKeyboard()
+        _binding?.search?.hideKeyboard()
         super.onStop()
     }
 

@@ -35,6 +35,7 @@ import app.olauncher.helper.showToast
 import app.olauncher.helper.usageStats.EventLogWrapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -63,24 +64,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectedApp(appModel: AppModel, flag: Int) {
         when (flag) {
-            Constants.FLAG_LAUNCH_APP -> {
+            Constants.FLAG_LAUNCH_APP, Constants.FLAG_HIDDEN_APPS -> {
                 if (!FocusModeManager.isAppAllowed(appContext, appModel.appPackage)) {
                     appContext.showToast(appContext.getString(R.string.app_blocked_focus))
                     return
                 }
-                ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
-                HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
                 launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
-            }
-
-            Constants.FLAG_HIDDEN_APPS -> {
-                if (!FocusModeManager.isAppAllowed(appContext, appModel.appPackage)) {
-                    appContext.showToast(appContext.getString(R.string.app_blocked_focus))
-                    return
+                viewModelScope.launch(Dispatchers.IO) {
+                    ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
+                    HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
                 }
-                ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
-                HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
-                launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
             }
 
             in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_8 -> {
@@ -169,34 +162,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun launchApp(packageName: String, activityClassName: String?, userHandle: UserHandle) {
-        val launcher = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        val activityInfo = launcher.getActivityList(packageName, userHandle)
-
-        val component = if (activityClassName.isNullOrBlank()) {
-            // activityClassName will be null for hidden apps.
-            when (activityInfo.size) {
-                0 -> {
-                    appContext.showToast(appContext.getString(R.string.app_not_found))
-                    return
+        viewModelScope.launch {
+            val launcher = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val component = withContext(Dispatchers.IO) {
+                val activityInfo = launcher.getActivityList(packageName, userHandle)
+                if (activityClassName.isNullOrBlank()) {
+                    when (activityInfo.size) {
+                        0 -> null
+                        1 -> ComponentName(packageName, activityInfo[0].name)
+                        else -> ComponentName(packageName, activityInfo[activityInfo.size - 1].name)
+                    }
+                } else {
+                    ComponentName(packageName, activityClassName)
                 }
-
-                1 -> ComponentName(packageName, activityInfo[0].name)
-                else -> ComponentName(packageName, activityInfo[activityInfo.size - 1].name)
             }
-        } else {
-            ComponentName(packageName, activityClassName)
-        }
-
-        try {
-            launcher.startMainActivity(component, userHandle, null, null)
-        } catch (e: SecurityException) {
+            if (component == null) {
+                appContext.showToast(appContext.getString(R.string.app_not_found))
+                return@launch
+            }
             try {
-                launcher.startMainActivity(component, android.os.Process.myUserHandle(), null, null)
+                launcher.startMainActivity(component, userHandle, null, null)
+            } catch (e: SecurityException) {
+                try {
+                    launcher.startMainActivity(component, android.os.Process.myUserHandle(), null, null)
+                } catch (e: Exception) {
+                    appContext.showToast(appContext.getString(R.string.unable_to_open_app))
+                }
             } catch (e: Exception) {
                 appContext.showToast(appContext.getString(R.string.unable_to_open_app))
             }
-        } catch (e: Exception) {
-            appContext.showToast(appContext.getString(R.string.unable_to_open_app))
         }
     }
 
@@ -213,7 +207,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun isOlauncherDefault() {
-        isOlauncherDefault.value = isOlauncherDefault(appContext)
+        isOlauncherDefault.postValue(isOlauncherDefault(appContext))
     }
 
     fun setWallpaperWorker() {
@@ -229,7 +223,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .getInstance(appContext)
             .enqueueUniquePeriodicWork(
                 Constants.WALLPAPER_WORKER_NAME,
-                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+                ExistingPeriodicWorkPolicy.KEEP,
                 uploadWorkRequest
             )
     }
@@ -293,9 +287,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getPerAppScreenTime() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
-        if (prefs.screenTimeLastUpdated.hasBeenMinutes(1).not()) {
-            if (perAppScreenTime.value != null) return
-        }
 
         viewModelScope.launch(Dispatchers.IO) {
             val eventLogWrapper = EventLogWrapper(appContext)

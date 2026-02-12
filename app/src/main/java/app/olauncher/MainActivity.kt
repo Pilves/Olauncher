@@ -12,7 +12,6 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import androidx.appcompat.app.AlertDialog
 import androidx.activity.OnBackPressedCallback
@@ -37,9 +36,11 @@ import app.olauncher.helper.resetLauncherViaFakeActivity
 import app.olauncher.helper.setPlainWallpaper
 import app.olauncher.helper.showLauncherSelector
 import app.olauncher.helper.showToast
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: ActivityMainBinding
     private var timerJob: Job? = null
+    private var themeCheckRetries = 0
 
     lateinit var appWidgetHost: AppWidgetHost
     lateinit var appWidgetManager: AppWidgetManager
@@ -87,7 +89,10 @@ class MainActivity : AppCompatActivity() {
 
         appWidgetManager = AppWidgetManager.getInstance(this)
         appWidgetHost = AppWidgetHost(this, Constants.APPWIDGET_HOST_ID)
-        appWidgetHost.startListening()
+
+        savedInstanceState?.let {
+            pendingWidgetId = it.getInt("pendingWidgetId", -1)
+        }
 
         bindWidgetLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -147,26 +152,26 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(FLAG_LAYOUT_NO_LIMITS)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("pendingWidgetId", pendingWidgetId)
+    }
+
     override fun onDestroy() {
-        if (::appWidgetHost.isInitialized) {
-            try {
-                appWidgetHost.stopListening()
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error stopping AppWidgetHost in onDestroy", e)
-            }
-        }
+        onWidgetBindResult = null
+        onWidgetConfigureResult = null
         super.onDestroy()
     }
 
     override fun onStart() {
         super.onStart()
+        themeCheckRetries = 0
         appWidgetHost.startListening()
         restartLauncherOrCheckTheme()
     }
 
     override fun onStop() {
         appWidgetHost.stopListening()
-        backToHomeScreen()
         super.onStop()
     }
 
@@ -261,8 +266,12 @@ class MainActivity : AppCompatActivity() {
     private fun restartLauncherOrCheckTheme(forceRestart: Boolean = false) {
         if (forceRestart || prefs.launcherRestartTimestamp.hasBeenHours(4)) {
             prefs.launcherRestartTimestamp = System.currentTimeMillis()
-            cacheDir.deleteRecursively()
-            recreate()
+            lifecycleScope.launch(Dispatchers.IO) {
+                cacheDir.deleteRecursively()
+                withContext(Dispatchers.Main) {
+                    recreate()
+                }
+            }
         } else
             checkTheme()
     }
@@ -273,8 +282,10 @@ class MainActivity : AppCompatActivity() {
             delay(200)
             if ((prefs.appTheme == AppCompatDelegate.MODE_NIGHT_YES && getColorFromAttr(R.attr.primaryColor) != getColor(R.color.white))
                 || (prefs.appTheme == AppCompatDelegate.MODE_NIGHT_NO && getColorFromAttr(R.attr.primaryColor) != getColor(R.color.black))
-            )
-                restartLauncherOrCheckTheme(true)
+            ) {
+                if (themeCheckRetries++ < 2)
+                    restartLauncherOrCheckTheme(true)
+            }
         }
     }
 

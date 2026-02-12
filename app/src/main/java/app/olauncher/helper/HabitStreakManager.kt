@@ -141,7 +141,9 @@ object HabitStreakManager {
     // --- Internal helpers ---
 
     private fun currentEpochDay(): Long {
-        return System.currentTimeMillis() / MILLIS_PER_DAY
+        val cal = java.util.Calendar.getInstance()
+        val offset = cal.get(java.util.Calendar.ZONE_OFFSET) + cal.get(java.util.Calendar.DST_OFFSET)
+        return (System.currentTimeMillis() + offset) / MILLIS_PER_DAY
     }
 
     private fun getHabitAppsInternal(context: Context): Set<String> {

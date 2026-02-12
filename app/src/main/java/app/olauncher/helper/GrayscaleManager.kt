@@ -15,15 +15,18 @@ object GrayscaleManager {
     private const val PREFS_NAME = "app.olauncher"
     private const val KEY_GRAYSCALE_ENABLED = "GRAYSCALE_ENABLED"
 
+    private val grayscalePaint by lazy {
+        Paint().apply {
+            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        }
+    }
+
     /**
      * Applies a full grayscale (saturation 0) filter to the given root view
      * using a hardware layer.
      */
     fun apply(rootView: View) {
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
-        }
-        rootView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+        rootView.setLayerType(View.LAYER_TYPE_HARDWARE, grayscalePaint)
     }
 
     /**

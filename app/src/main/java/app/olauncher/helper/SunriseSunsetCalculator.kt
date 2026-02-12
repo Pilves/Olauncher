@@ -54,9 +54,9 @@ object SunriseSunsetCalculator {
         val sunriseLocal = sunriseUtcHours + offsetHours
         val sunsetLocal = sunsetUtcHours + offsetHours
 
-        // Clamp to reasonable values (6:00 - 22:00)
-        val sunriseTime = hoursToLocalTime(sunriseLocal.coerceIn(6.0, 22.0))
-        val sunsetTime = hoursToLocalTime(sunsetLocal.coerceIn(6.0, 22.0))
+        // Clamp to valid range (0:00 - 23:59)
+        val sunriseTime = hoursToLocalTime(sunriseLocal.coerceIn(0.0, 23.99))
+        val sunsetTime = hoursToLocalTime(sunsetLocal.coerceIn(0.0, 23.99))
 
         // Ensure sunrise is before sunset
         return if (sunriseTime.isBefore(sunsetTime)) {

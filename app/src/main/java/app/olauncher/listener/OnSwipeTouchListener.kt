@@ -7,14 +7,6 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnTouchListener
-import app.olauncher.data.Constants
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 /*
@@ -24,22 +16,18 @@ Source: https://www.tutorialspoint.com/how-to-handle-swipe-gestures-in-kotlin
 
 internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
     private var longPressOn = false
-    private var longPressJob: Job? = null
-    private val parentJob = Job()
-    private val coroutineScope = CoroutineScope(Dispatchers.Main + parentJob)
     private val gestureDetector: GestureDetector
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
-        if (motionEvent.action == MotionEvent.ACTION_UP) {
-            longPressOn = false
-            longPressJob?.cancel()
+        when (motionEvent.action) {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                longPressOn = false
+            }
         }
         return gestureDetector.onTouchEvent(motionEvent)
     }
 
-    fun cleanup() {
-        parentJob.cancel()
-    }
+    fun cleanup() {}
 
     private inner class GestureListener : SimpleOnGestureListener() {
         private val SWIPE_THRESHOLD: Int = 100
@@ -61,15 +49,7 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
 
         override fun onLongPress(e: MotionEvent) {
             longPressOn = true
-            longPressJob?.cancel()
-            longPressJob = coroutineScope.launch {
-                delay(Constants.LONG_PRESS_DELAY_MS)
-                withContext(Dispatchers.Main) {
-                    if (isActive && longPressOn)
-                        onLongClick()
-                }
-            }
-            super.onLongPress(e)
+            onLongClick()
         }
 
         override fun onFling(
@@ -79,8 +59,9 @@ internal open class OnSwipeTouchListener(c: Context?) : OnTouchListener {
             velocityY: Float,
         ): Boolean {
             try {
-                val diffY = event2.y - (event1?.y ?: 0F)
-                val diffX = event2.x - (event1?.x ?: 0F)
+                if (event1 == null) return false
+                val diffY = event2.y - event1.y
+                val diffX = event2.x - event1.x
                 if (abs(diffX) > abs(diffY)) {
                     if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
                         if (diffX > 0) onSwipeRight() else onSwipeLeft()

@@ -29,6 +29,11 @@ class SingleLiveEvent<T> : MutableLiveData<T>() {
         super.setValue(t)
     }
 
+    override fun postValue(value: T) {
+        pending.set(true)
+        super.postValue(value)
+    }
+
     @MainThread
     fun call() {
         value = null

@@ -50,7 +50,7 @@ object ThemeScheduleManager {
 
     fun startWorker(context: Context) {
         val workRequest = PeriodicWorkRequestBuilder<ThemeScheduleWorker>(
-            15, TimeUnit.MINUTES
+            60, TimeUnit.MINUTES
         ).addTag(WORKER_TAG).build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -70,17 +70,24 @@ object ThemeScheduleManager {
 
         return when (mode) {
             MODE_SCHEDULED -> {
-                val lightTime = LocalTime.parse(getLightTime(context), timeFormatter)
-                val darkTime = LocalTime.parse(getDarkTime(context), timeFormatter)
+                val lightTime = try {
+                    LocalTime.parse(getLightTime(context), timeFormatter)
+                } catch (_: Exception) { LocalTime.of(7, 0) }
+                val darkTime = try {
+                    LocalTime.parse(getDarkTime(context), timeFormatter)
+                } catch (_: Exception) { LocalTime.of(19, 0) }
                 isInDarkPeriod(now, lightTime, darkTime)
             }
 
             MODE_SUNRISE_SUNSET -> {
                 val (latStr, lngStr) = WeatherManager.getLocation(context)
                 if (latStr.isBlank() || lngStr.isBlank()) {
-                    // No location set, fall back to default schedule
-                    val lightTime = LocalTime.parse(getLightTime(context), timeFormatter)
-                    val darkTime = LocalTime.parse(getDarkTime(context), timeFormatter)
+                    val lightTime = try {
+                        LocalTime.parse(getLightTime(context), timeFormatter)
+                    } catch (_: Exception) { LocalTime.of(7, 0) }
+                    val darkTime = try {
+                        LocalTime.parse(getDarkTime(context), timeFormatter)
+                    } catch (_: Exception) { LocalTime.of(19, 0) }
                     isInDarkPeriod(now, lightTime, darkTime)
                 } else {
                     val lat = latStr.toDoubleOrNull() ?: return false

@@ -7,13 +7,12 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
-import kotlinx.coroutines.coroutineScope
 
 class WallpaperWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
-    private val prefs = Prefs(applicationContext)
+    private val prefs by lazy { Prefs(applicationContext) }
 
-    override suspend fun doWork(): Result = coroutineScope {
+    override suspend fun doWork(): Result {
         val success =
             if (isOlauncherDefault(applicationContext).not())
                 true
@@ -29,7 +28,7 @@ class WallpaperWorker(appContext: Context, workerParams: WorkerParameters) : Cor
             } else
                 true
 
-        if (success) {
+        return if (success) {
             Result.success()
         } else {
             Log.w("WallpaperWorker", "Wallpaper update failed, retrying")

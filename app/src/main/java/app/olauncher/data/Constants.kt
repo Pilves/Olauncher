@@ -58,8 +58,8 @@ object Constants {
     }
 
     object CharacterIndicator {
-        const val SHOW = 102
-        const val HIDE = 101
+        const val SHOW = 202
+        const val HIDE = 201
     }
 
     val CLOCK_APP_PACKAGES = arrayOf(

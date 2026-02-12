@@ -2,6 +2,8 @@ package app.olauncher.helper
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -47,22 +49,25 @@ object WeatherManager {
 
     fun getDisplayString(context: Context): String = getCachedTemp(context)
 
-    suspend fun fetchWeather(context: Context): String? {
+    suspend fun fetchWeather(context: Context): String? = withContext(Dispatchers.IO) {
         val p = prefs(context)
         val lastFetched = p.getLong(WEATHER_LAST_FETCHED, 0L)
         val now = System.currentTimeMillis()
 
         if (now - lastFetched < FETCH_INTERVAL_MS) {
             val cached = getCachedTemp(context)
-            return cached.ifEmpty { null }
+            return@withContext cached.ifEmpty { null }
         }
 
         val (lat, lng) = getLocation(context)
-        if (lat.isBlank() || lng.isBlank()) return null
+        if (lat.isBlank() || lng.isBlank()) return@withContext null
+
+        val latD = lat.toDoubleOrNull() ?: return@withContext null
+        val lngD = lng.toDoubleOrNull() ?: return@withContext null
 
         var connection: HttpURLConnection? = null
-        return try {
-            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lng&current_weather=true")
+        try {
+            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$latD&longitude=$lngD&current_weather=true")
             connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 10_000
             connection.readTimeout = 15_000
@@ -70,7 +75,7 @@ object WeatherManager {
             connection.connect()
 
             if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                return null
+                return@withContext null
             }
 
             val response = connection.inputStream.bufferedReader().use { it.readText() }
@@ -79,7 +84,7 @@ object WeatherManager {
             val temperature = currentWeather.getDouble("temperature")
             val formatted = "${temperature.toInt()}\u00B0"
 
-            synchronized(this) {
+            synchronized(this@WeatherManager) {
                 p.edit()
                     .putString(WEATHER_CACHED_TEMP, formatted)
                     .putLong(WEATHER_LAST_FETCHED, now)

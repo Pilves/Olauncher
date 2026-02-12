@@ -3,7 +3,7 @@ package app.olauncher.data
 data class FolderApp(
     val appName: String,
     val packageName: String,
-    val activityClassName: String,
+    val activityClassName: String = "",
     val userString: String
 )
 

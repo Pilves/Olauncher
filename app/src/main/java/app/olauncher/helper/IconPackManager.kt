@@ -26,7 +26,7 @@ object IconPackManager {
      * Cache: icon-pack package name  ->  (componentName -> drawableName).
      * Cleared when the process dies; that is acceptable for a launcher.
      */
-    private val cache = mutableMapOf<String, Map<String, String>>()
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
 
     /**
      * Returns a list of installed icon packs as (packageName, appLabel) pairs.
@@ -164,16 +164,20 @@ object IconPackManager {
         packageName: String
     ): Map<String, String>? {
         return try {
-            val stream = packResources.assets.open("appfilter.xml")
-            val result = mutableMapOf<String, String>()
-            val factory = org.xmlpull.v1.XmlPullParserFactory.newInstance()
-            val parser = factory.newPullParser()
-            parser.setInput(stream, "UTF-8")
-            parseAppFilterXml(parser, result)
-            stream.close()
-            result
+            packResources.assets.open("appfilter.xml").use { stream ->
+                val result = mutableMapOf<String, String>()
+                val factory = org.xmlpull.v1.XmlPullParserFactory.newInstance()
+                val parser = factory.newPullParser()
+                parser.setInput(stream, "UTF-8")
+                parseAppFilterXml(parser, result)
+                result
+            }
         } catch (_: Exception) {
             null
         }
+    }
+
+    fun clearCache() {
+        cache.clear()
     }
 }

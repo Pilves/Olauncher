@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.LauncherApps
 import androidx.core.content.edit
+import app.olauncher.R
 import app.olauncher.data.Constants
 
 object DoubleTapActionManager {
@@ -62,7 +63,11 @@ object DoubleTapActionManager {
                     val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
                     val component = ComponentName(packageName, activityName)
                     val userHandle = getUserHandleFromString(context, userString)
-                    launcherApps.startMainActivity(component, userHandle, null, null)
+                    try {
+                        launcherApps.startMainActivity(component, userHandle, null, null)
+                    } catch (e: Exception) {
+                        context.showToast(context.getString(R.string.unable_to_open_app))
+                    }
                 }
             }
             Constants.GestureAction.OPEN_NOTIFICATIONS -> expandNotificationDrawer(context)

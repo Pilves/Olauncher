@@ -43,6 +43,8 @@ class Prefs(context: Context) {
     private val CACHED_USAGE_STATS = "CACHED_USAGE_STATS"
     private val SWIPE_LEFT_ACTION = "SWIPE_LEFT_ACTION"
     private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
+    private val SHOW_ICONS = "SHOW_ICONS"
+    private val ICON_PACK_PACKAGE = "ICON_PACK_PACKAGE"
 
     private val APP_NAME_1 = "APP_NAME_1"
     private val APP_NAME_2 = "APP_NAME_2"
@@ -195,12 +197,12 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putInt(WIDGET_PLACEMENT, value) }
 
     var showIcons: Boolean
-        get() = prefs.getBoolean("SHOW_ICONS", false)
-        set(value) = prefs.edit { putBoolean("SHOW_ICONS", value) }
+        get() = prefs.getBoolean(SHOW_ICONS, false)
+        set(value) = prefs.edit { putBoolean(SHOW_ICONS, value) }
 
     var iconPackPackage: String
-        get() = prefs.getString("ICON_PACK_PACKAGE", "") ?: ""
-        set(value) = prefs.edit { putString("ICON_PACK_PACKAGE", value) }
+        get() = prefs.getString(ICON_PACK_PACKAGE, "") ?: ""
+        set(value) = prefs.edit { putString(ICON_PACK_PACKAGE, value) }
 
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
@@ -223,7 +225,7 @@ class Prefs(context: Context) {
     }
 
     fun setCachedUsageStats(stats: Map<String, Long>) {
-        usageStatsCache = null
+        usageStatsCache = stats
         prefs.edit {
             putString(CACHED_USAGE_STATS, stats.entries.joinToString(",") { "${it.key}=${it.value}" })
         }
@@ -339,7 +341,7 @@ class Prefs(context: Context) {
     }
 
     var hiddenApps: MutableSet<String>
-        get() = prefs.getStringSet(HIDDEN_APPS, mutableSetOf()) as MutableSet<String>
+        get() = HashSet(prefs.getStringSet(HIDDEN_APPS, mutableSetOf()) ?: mutableSetOf())
         set(value) = prefs.edit { putStringSet(HIDDEN_APPS, value) }
 
     var hiddenAppsUpdated: Boolean
@@ -540,26 +542,50 @@ class Prefs(context: Context) {
     private fun activityKeyForSlot(slot: Int) = "APP_ACTIVITY_CLASS_NAME_$slot"
     private fun userKeyForSlot(slot: Int) = "APP_USER_$slot"
 
-    fun getHomeAppName(slot: Int): String = prefs.getString(nameKeyForSlot(slot), "").toString()
-    fun setHomeAppName(slot: Int, value: String) = prefs.edit { putString(nameKeyForSlot(slot), value) }
+    fun getHomeAppName(slot: Int): String {
+        require(slot in 1..8)
+        return prefs.getString(nameKeyForSlot(slot), "") ?: ""
+    }
+    fun setHomeAppName(slot: Int, value: String) {
+        require(slot in 1..8)
+        prefs.edit { putString(nameKeyForSlot(slot), value) }
+    }
 
-    fun getHomeAppPackage(slot: Int): String = prefs.getString(packageKeyForSlot(slot), "").toString()
-    fun setHomeAppPackage(slot: Int, value: String) = prefs.edit { putString(packageKeyForSlot(slot), value) }
+    fun getHomeAppPackage(slot: Int): String {
+        require(slot in 1..8)
+        return prefs.getString(packageKeyForSlot(slot), "") ?: ""
+    }
+    fun setHomeAppPackage(slot: Int, value: String) {
+        require(slot in 1..8)
+        prefs.edit { putString(packageKeyForSlot(slot), value) }
+    }
 
-    fun getHomeAppActivityClassName(slot: Int): String = prefs.getString(activityKeyForSlot(slot), "").toString()
-    fun setHomeAppActivityClassName(slot: Int, value: String?) = prefs.edit { putString(activityKeyForSlot(slot), value) }
+    fun getHomeAppActivityClassName(slot: Int): String {
+        require(slot in 1..8)
+        return prefs.getString(activityKeyForSlot(slot), "") ?: ""
+    }
+    fun setHomeAppActivityClassName(slot: Int, value: String?) {
+        require(slot in 1..8)
+        prefs.edit { putString(activityKeyForSlot(slot), value) }
+    }
 
-    fun getHomeAppUser(slot: Int): String = prefs.getString(userKeyForSlot(slot), "").toString()
-    fun setHomeAppUser(slot: Int, value: String) = prefs.edit { putString(userKeyForSlot(slot), value) }
+    fun getHomeAppUser(slot: Int): String {
+        require(slot in 1..8)
+        return prefs.getString(userKeyForSlot(slot), "") ?: ""
+    }
+    fun setHomeAppUser(slot: Int, value: String) {
+        require(slot in 1..8)
+        prefs.edit { putString(userKeyForSlot(slot), value) }
+    }
 
     fun getAppName(location: Int): String = getHomeAppName(location)
     fun getAppPackage(location: Int): String = getHomeAppPackage(location)
     fun getAppActivityClassName(location: Int): String = getHomeAppActivityClassName(location)
     fun getAppUser(location: Int): String = getHomeAppUser(location)
 
-    fun getAppRenameLabel(appPackage: String): String = prefs.getString(appPackage, "").toString()
+    fun getAppRenameLabel(appPackage: String): String = prefs.getString("RENAME_$appPackage", "").toString()
 
-    fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit { putString(appPackage, renameLabel) }
+    fun setAppRenameLabel(appPackage: String, renameLabel: String) = prefs.edit { putString("RENAME_$appPackage", renameLabel) }
 
     // Keys to exclude from export (device-specific, not transferable)
     private val exportExcludeKeys = setOf(
@@ -590,15 +616,38 @@ class Prefs(context: Context) {
     }
 
     fun importFromJson(json: JSONObject) {
+        val excludedValues = mutableMapOf<String, Any?>()
+        for (key in exportExcludeKeys) {
+            if (prefs.contains(key)) {
+                excludedValues[key] = prefs.all[key]
+            }
+        }
         prefs.edit {
+            clear()
+            for ((key, value) in excludedValues) {
+                when (value) {
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is String -> putString(key, value)
+                    is Boolean -> putBoolean(key, value)
+                    is Float -> putFloat(key, value)
+                }
+            }
             for (key in json.keys()) {
                 if (key in exportExcludeKeys) continue
                 val value = json.get(key)
                 when (value) {
                     is Boolean -> putBoolean(key, value)
-                    is Int -> putInt(key, value)
-                    is Long -> putLong(key, value)
-                    is Double -> putFloat(key, value.toFloat())
+                    is Number -> {
+                        val doubleVal = value.toDouble()
+                        if (value is Double || (value is Int && doubleVal != doubleVal.toLong().toDouble())) {
+                            putFloat(key, doubleVal.toFloat())
+                        } else if (doubleVal > Int.MAX_VALUE || doubleVal < Int.MIN_VALUE) {
+                            putLong(key, doubleVal.toLong())
+                        } else {
+                            putInt(key, value.toInt())
+                        }
+                    }
                     is String -> putString(key, value)
                     is org.json.JSONArray -> {
                         val set = mutableSetOf<String>()

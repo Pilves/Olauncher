@@ -25,6 +25,7 @@ import org.json.JSONObject
 class FolderManager(context: Context) {
 
     companion object {
+        private val lock = Any()
         private const val PREFS_NAME = "app.olauncher"
         private const val KEY_FOLDER_DATA = "FOLDER_DATA"
         private const val MAX_APPS_PER_FOLDER = 4
@@ -37,8 +38,7 @@ class FolderManager(context: Context) {
         private const val JSON_USER_STRING = "userString"
     }
 
-    private val prefs = context.getSharedPreferences(PREFS_NAME, 0)
-    private val lock = Any()
+    private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, 0)
 
     /** Returns true if the given home-app [slot] is currently occupied by a folder. */
     fun isFolderSlot(slot: Int): Boolean {

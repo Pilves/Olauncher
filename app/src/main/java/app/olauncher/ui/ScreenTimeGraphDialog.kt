@@ -14,6 +14,7 @@ import app.olauncher.helper.usageStats.EventLogWrapper
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -26,6 +27,7 @@ import java.util.Locale
  */
 class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
 
+    private var loadJob: Job? = null
     private lateinit var graphView: ScreenTimeGraphView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,8 +69,7 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!context.appUsagePermissionGranted()) return
 
-        val scope = CoroutineScope(Dispatchers.Main)
-        scope.launch {
+        loadJob = CoroutineScope(Dispatchers.Main + Job()).launch {
             val data = withContext(Dispatchers.IO) {
                 val wrapper = EventLogWrapper(context)
                 val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
@@ -94,5 +95,10 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
 
             graphView.setData(data)
         }
+    }
+
+    override fun onStop() {
+        loadJob?.cancel()
+        super.onStop()
     }
 }

@@ -183,9 +183,9 @@ class GestureLetterOverlayView @JvmOverloads constructor(
 
         // Bounding box of the path
         var minX = Float.MAX_VALUE
-        var maxX = Float.MIN_VALUE
+        var maxX = Float.NEGATIVE_INFINITY
         var minY = Float.MAX_VALUE
-        var maxY = Float.MIN_VALUE
+        var maxY = Float.NEGATIVE_INFINITY
         for (p in pts) {
             if (p.x < minX) minX = p.x
             if (p.x > maxX) maxX = p.x

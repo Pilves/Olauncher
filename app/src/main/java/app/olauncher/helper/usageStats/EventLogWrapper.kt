@@ -146,18 +146,18 @@ class EventLogWrapper(private val context: Context) {
                  * "An event type denoting that the Android runtime underwent a shutdown process..."
                  */
                 UsageEvents.Event.DEVICE_SHUTDOWN -> {
-                    // Per docs: iterate over remaining start events and treat them as closed
+                    val keysToNull = mutableListOf<AppClass>()
                     moveToForegroundMap.forEach { (key, value) ->
-                        if (value != null) { // If it's a remaining start event
+                        if (value != null) {
                             componentForegroundStats.add(
                                 ComponentForegroundStat(value, event.timeStamp, key.packageName)
                             )
-                            // Set entire app to closed
                             moveToForegroundMap.keys
                                 .filter { it.packageName == key.packageName }
-                                .forEach { samePackageKey -> moveToForegroundMap[samePackageKey] = null }
+                                .forEach { samePackageKey -> keysToNull.add(samePackageKey) }
                         }
                     }
+                    keysToNull.forEach { moveToForegroundMap[it] = null }
                 }
 
                 /*

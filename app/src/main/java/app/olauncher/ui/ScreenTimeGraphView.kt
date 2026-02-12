@@ -39,6 +39,10 @@ class ScreenTimeGraphView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
     }
 
+    private val rect = RectF()
+    private val topPadding by lazy { 24.dpToPx().toFloat() }
+    private val bottomPadding by lazy { 20.dpToPx().toFloat() }
+    private val sidePadding by lazy { 12.dpToPx().toFloat() }
     private val barCornerRadius = 4.dpToPx().toFloat()
     private val intrinsicHeightPx = 200.dpToPx()
 
@@ -71,10 +75,6 @@ class ScreenTimeGraphView @JvmOverloads constructor(
         val barCount = data.size
         if (barCount == 0) return
 
-        val topPadding = 24.dpToPx().toFloat()    // space for hour labels above bars
-        val bottomPadding = 20.dpToPx().toFloat()  // space for day labels below bars
-        val sidePadding = 12.dpToPx().toFloat()
-
         val availableWidth = width.toFloat() - sidePadding * 2
         val availableHeight = height.toFloat() - topPadding - bottomPadding
 
@@ -82,8 +82,6 @@ class ScreenTimeGraphView @JvmOverloads constructor(
         val barWidth = (slotWidth * 0.55f).coerceAtMost(40.dpToPx().toFloat())
 
         val maxValue = data.maxOf { it.second }.coerceAtLeast(1L)
-
-        val rect = RectF()
 
         for (i in data.indices) {
             val (label, millis) = data[i]

@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:animateLayoutChanges="true"
     android:background="?attr/primaryShadeDarkColor">
 
     <LinearLayout
@@ -59,7 +58,6 @@
         android:marqueeRepeatLimit="marquee_forever"
         android:maxLines="1"
         android:scrollHorizontally="true"
-        android:singleLine="true"
         android:text="@string/app_drawer_tips"
         android:visibility="gone" />
 

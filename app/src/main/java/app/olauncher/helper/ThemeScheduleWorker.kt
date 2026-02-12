@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.coroutineScope
 
 class ThemeScheduleWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -15,15 +14,19 @@ class ThemeScheduleWorker(appContext: Context, workerParams: WorkerParameters) :
         const val LAUNCHER_RECREATE_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
     }
 
-    override suspend fun doWork(): Result = coroutineScope {
+    override suspend fun doWork(): Result {
         val mode = ThemeScheduleManager.getMode(applicationContext)
 
-        // If manual mode, nothing to do
         if (mode == ThemeScheduleManager.MODE_MANUAL) {
-            return@coroutineScope Result.success()
+            return Result.success()
         }
 
-        val shouldBeDark = ThemeScheduleManager.shouldBeDark(applicationContext)
+        val shouldBeDark = try {
+            ThemeScheduleManager.shouldBeDark(applicationContext)
+        } catch (_: Exception) {
+            return Result.success()
+        }
+
         val prefs = applicationContext.getSharedPreferences(PREFS_NAME, 0)
         val currentTheme = prefs.getInt(APP_THEME, AppCompatDelegate.MODE_NIGHT_YES)
 
@@ -45,6 +48,6 @@ class ThemeScheduleWorker(appContext: Context, workerParams: WorkerParameters) :
                 .apply()
         }
 
-        Result.success()
+        return Result.success()
     }
 }

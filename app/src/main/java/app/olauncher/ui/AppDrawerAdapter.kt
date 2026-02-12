@@ -69,8 +69,8 @@ class AppDrawerAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         try {
-            if (appFilteredList.size == 0 || position == RecyclerView.NO_POSITION) return
-            val appModel = appFilteredList[holder.bindingAdapterPosition]
+            if (itemCount == 0 || position == RecyclerView.NO_POSITION) return
+            val appModel = getItem(position)
             holder.bind(
                 flag,
                 appLabelGravity,
@@ -117,7 +117,7 @@ class AppDrawerAdapter(
                 results?.values?.let {
                     val items = (it as? MutableList<AppModel>) ?: (it as? List<AppModel>)?.toMutableList() ?: return
                     appFilteredList = items
-                    submitList(appFilteredList) {
+                    submitList(appFilteredList.toList()) {
                         autoLaunch()
                     }
                 }
@@ -151,17 +151,24 @@ class AppDrawerAdapter(
         appsList.add(AppModel("", null, "", "", false, android.os.Process.myUserHandle()))
         this.appsList = appsList
         if (sortByUsage && usageStats.isNotEmpty()) {
-            // Apply sort immediately via the filter
             filter.filter("")
         } else {
             this.appFilteredList = appsList
-            submitList(appsList)
+            submitList(appsList.toList())
         }
     }
 
     fun launchFirstInList() {
         if (appFilteredList.size > 0)
             appClickListener(appFilteredList[0])
+    }
+
+    fun removeApp(position: Int) {
+        if (position < 0 || position >= appFilteredList.size) return
+        val app = appFilteredList[position]
+        appFilteredList.removeAt(position)
+        appsList.remove(app)
+        submitList(appFilteredList.toList())
     }
 
     class ViewHolder(private val binding: AdapterAppDrawerBinding) : RecyclerView.ViewHolder(binding.root) {

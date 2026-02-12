@@ -10,7 +10,7 @@
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Screen Time"
+        android:text="@string/screen_time"
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"

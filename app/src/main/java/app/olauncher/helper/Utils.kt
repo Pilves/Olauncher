@@ -49,7 +49,6 @@ import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.Scanner
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -177,8 +176,7 @@ fun setPlainWallpaperByTheme(context: Context, appTheme: Int) {
 
 fun setPlainWallpaper(context: Context, color: Int) {
     try {
-        val (width, height) = getScreenDimensions(context)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(context.getColor(color))
         val manager = WallpaperManager.getInstance(context)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -280,13 +278,9 @@ suspend fun setWallpaper(appContext: Context, url: String): Boolean {
             wallpaperManager.setBitmap(scaledBitmap, null, false, WallpaperManager.FLAG_LOCK)
         } catch (e: Exception) {
             return@withContext false
-        }
-
-        try {
-            originalImageBitmap.recycle()
-            scaledBitmap.recycle()
-        } catch (e: Exception) {
-            Log.e("Utils", "Failed to recycle wallpaper bitmaps", e)
+        } finally {
+            try { if (scaledBitmap != originalImageBitmap) scaledBitmap.recycle() } catch (_: Exception) {}
+            try { originalImageBitmap.recycle() } catch (_: Exception) {}
         }
         true
     }
@@ -326,14 +320,9 @@ suspend fun getTodaysWallpaper(wallType: String, firstOpenTime: Long): String {
             connection.doInput = true
             connection.connect()
 
-            val inputStream = connection.inputStream
-            val scanner = Scanner(inputStream)
-            val stringBuffer = StringBuffer()
-            while (scanner.hasNext()) {
-                stringBuffer.append(scanner.nextLine())
-            }
+            val result = connection.inputStream.bufferedReader().use { it.readText() }
 
-            val json = JSONObject(stringBuffer.toString())
+            val json = JSONObject(result)
             val wallpapers = json.getString(key)
             val wallpapersJson = JSONObject(wallpapers)
             wallpaperUrl = wallpapersJson.getString(wallType)
@@ -449,14 +438,16 @@ fun Context.copyToClipboard(text: String) {
     val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clipData = ClipData.newPlainText(getString(R.string.app_name), text)
     clipboardManager.setPrimaryClip(clipData)
-    showToast("")
 }
 
 fun Context.openUrl(url: String) {
     if (url.isEmpty()) return
-    val intent = Intent(Intent.ACTION_VIEW)
-    intent.data = Uri.parse(url)
-    startActivity(intent)
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        startActivity(intent)
+    } catch (e: Exception) {
+        showToast("Unable to open link")
+    }
 }
 
 fun Context.isSystemApp(packageName: String): Boolean {
