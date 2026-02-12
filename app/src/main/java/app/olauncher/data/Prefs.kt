@@ -8,7 +8,22 @@ import androidx.core.content.edit
 import org.json.JSONObject
 
 class Prefs(context: Context) {
-    private val PREFS_FILENAME = "app.olauncher"
+    companion object {
+        const val PREFS_NAME = "app.olauncher"
+        const val KEY_APP_THEME = "APP_THEME"
+        const val KEY_LAUNCHER_RECREATE_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
+
+        // Keys that must always be stored as Long (timestamps etc.)
+        // Uses the actual SharedPreferences key strings, not field names.
+        private val LONG_PREF_KEYS = setOf(
+            "FIRST_OPEN_TIME",
+            "SCREEN_TIME_LAST_UPDATED",
+            KEY_LAUNCHER_RECREATE_TIMESTAMP,
+            "WEATHER_LAST_FETCHED"
+        )
+    }
+
+    private val PREFS_FILENAME = PREFS_NAME
 
     private val FIRST_OPEN = "FIRST_OPEN"
     private val FIRST_OPEN_TIME = "FIRST_OPEN_TIME"
@@ -28,12 +43,12 @@ class Prefs(context: Context) {
     private val SWIPE_RIGHT_ENABLED = "SWIPE_RIGHT_ENABLED"
     private val HIDDEN_APPS = "HIDDEN_APPS"
     private val HIDDEN_APPS_UPDATED = "HIDDEN_APPS_UPDATED"
-    private val APP_THEME = "APP_THEME"
+    private val APP_THEME = KEY_APP_THEME
     private val SWIPE_DOWN_ACTION = "SWIPE_DOWN_ACTION"
     private val TEXT_SIZE_SCALE = "TEXT_SIZE_SCALE"
     private val HIDE_SET_DEFAULT_LAUNCHER = "HIDE_SET_DEFAULT_LAUNCHER"
     private val SCREEN_TIME_LAST_UPDATED = "SCREEN_TIME_LAST_UPDATED"
-    private val LAUNCHER_RESTART_TIMESTAMP = "LAUNCHER_RECREATE_TIMESTAMP"
+    private val LAUNCHER_RESTART_TIMESTAMP = KEY_LAUNCHER_RECREATE_TIMESTAMP
     private val WIDGET_ID = "WIDGET_ID"
     private val WIDGET_IDS = "WIDGET_IDS"
     private val WIDGET_PLACEMENT = "WIDGET_PLACEMENT"
@@ -45,6 +60,7 @@ class Prefs(context: Context) {
     private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
     private val SHOW_ICONS = "SHOW_ICONS"
     private val ICON_PACK_PACKAGE = "ICON_PACK_PACKAGE"
+    private val HABIT_TRACKING_ENABLED = "HABIT_TRACKING_ENABLED"
 
     private val APP_NAME_1 = "APP_NAME_1"
     private val APP_NAME_2 = "APP_NAME_2"
@@ -204,6 +220,10 @@ class Prefs(context: Context) {
         get() = prefs.getString(ICON_PACK_PACKAGE, "") ?: ""
         set(value) = prefs.edit { putString(ICON_PACK_PACKAGE, value) }
 
+    var habitTrackingEnabled: Boolean
+        get() = prefs.getBoolean(HABIT_TRACKING_ENABLED, false)
+        set(value) = prefs.edit { putBoolean(HABIT_TRACKING_ENABLED, value) }
+
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
         set(value) = prefs.edit { putBoolean(APP_DRAWER_SORT_BY_USAGE, value) }
@@ -274,6 +294,15 @@ class Prefs(context: Context) {
         widgetHeights = map.entries.joinToString(",") { "${it.key}:${it.value}" }
     }
 
+    fun removeWidgetHeight(widgetId: Int) {
+        val current = widgetHeightsCache ?: parseWidgetHeights()
+        val updated = current.toMutableMap()
+        updated.remove(widgetId)
+        val raw = updated.entries.joinToString(",") { "${it.key}:${it.value}" }
+        prefs.edit { putString(WIDGET_HEIGHTS, raw) }
+        widgetHeightsCache = updated
+    }
+
     private fun parseWidgetHeights(): Map<Int, Int> {
         widgetHeightsCache?.let { return it }
         val raw = widgetHeights
@@ -333,9 +362,13 @@ class Prefs(context: Context) {
         return parsed
     }
 
-    fun migrateWidgetIfNeeded() {
+    fun migrateWidgetIfNeeded(appWidgetManager: android.appwidget.AppWidgetManager? = null) {
         if (widgetId != -1 && widgetIds.isBlank()) {
             setWidgetIdList(listOf(widgetId))
+            // Try to save provider info for the migrated widget
+            appWidgetManager?.getAppWidgetInfo(widgetId)?.provider?.let { provider ->
+                setWidgetProvider(widgetId, provider.flattenToString())
+            }
             widgetId = -1
         }
     }
@@ -590,6 +623,7 @@ class Prefs(context: Context) {
     // Keys to exclude from export (device-specific, not transferable)
     private val exportExcludeKeys = setOf(
         WIDGET_ID, WIDGET_IDS, WIDGET_HEIGHTS, WIDGET_PLACEMENT, WIDGET_PROVIDERS,
+        CACHED_USAGE_STATS,
         "WEATHER_CACHED_TEMP", "WEATHER_LAST_FETCHED",
         "FOCUS_MODE_ENABLED", "FOCUS_MODE_END_TIME",
         "HABIT_STREAK_DATA"
@@ -636,20 +670,21 @@ class Prefs(context: Context) {
             for (key in json.keys()) {
                 if (key in exportExcludeKeys) continue
                 val value = json.get(key)
-                when (value) {
-                    is Boolean -> putBoolean(key, value)
-                    is Number -> {
+                when {
+                    key in LONG_PREF_KEYS -> putLong(key, (value as Number).toLong())
+                    value is Boolean -> putBoolean(key, value)
+                    value is String -> putString(key, value)
+                    value is Int -> {
                         val doubleVal = value.toDouble()
-                        if (value is Double || (value is Int && doubleVal != doubleVal.toLong().toDouble())) {
+                        if (doubleVal != doubleVal.toLong().toDouble()) {
                             putFloat(key, doubleVal.toFloat())
-                        } else if (doubleVal > Int.MAX_VALUE || doubleVal < Int.MIN_VALUE) {
-                            putLong(key, doubleVal.toLong())
                         } else {
-                            putInt(key, value.toInt())
+                            putInt(key, value)
                         }
                     }
-                    is String -> putString(key, value)
-                    is org.json.JSONArray -> {
+                    value is Long -> putLong(key, value)
+                    value is Double -> putFloat(key, value.toFloat())
+                    value is org.json.JSONArray -> {
                         val set = mutableSetOf<String>()
                         for (i in 0 until value.length()) set.add(value.getString(i))
                         putStringSet(key, set)

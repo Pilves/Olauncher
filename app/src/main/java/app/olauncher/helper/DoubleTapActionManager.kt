@@ -71,7 +71,7 @@ object DoubleTapActionManager {
                 }
             }
             Constants.GestureAction.OPEN_NOTIFICATIONS -> expandNotificationDrawer(context)
-            Constants.GestureAction.OPEN_SEARCH -> openSearch(context)
+            Constants.GestureAction.OPEN_SEARCH -> context.openSearch()
             Constants.GestureAction.LOCK_SCREEN -> lockPhone()
             Constants.GestureAction.OPEN_CAMERA -> openCameraApp(context)
             Constants.GestureAction.TOGGLE_FLASHLIGHT -> toggleFlashlight()

@@ -1,120 +1,52 @@
-# Olauncher (Modified Fork)
+# Olauncher
 
-A minimal, text-based Android launcher. Forked from [tanujnotes/Olauncher](https://github.com/tanujnotes/Olauncher) with extensive new features and polish while preserving the minimalist philosophy.
+A minimal, text-based Android launcher designed to help you use your phone less and more intentionally.
 
-## What's different from upstream
+No icons, no clutter — just the apps you need, the habits you want to build, and the tools to stay in control of your screen time.
 
-### Multi-widget support
-- Add multiple widgets to your home screen (long-press > Add widget)
-- Swap, remove, resize, or reorder widgets (long-press on a widget)
-- Per-widget height control: Small, Medium, Large, Extra large, Full
-- Choose widget placement: above or below your app list
-- Search/filter in the widget picker
-- Widget providers saved for automatic restore after reinstall
+## Features
 
-### Focus Mode
-- Timed focus sessions: 25 minutes, 1 hour, 2 hours, or until manually disabled
-- Whitelist up to 5 apps that remain accessible during focus
-- Blocked apps show a toast notification instead of launching
-- Toggle from the home long-press menu or Settings > Wellbeing
-
-### Grayscale Mode
-- One-tap grayscale filter over the entire launcher
-- Hardware-accelerated color matrix for zero performance impact
-- Toggle from the home long-press menu or Settings > Wellbeing
-
-### App Folders
-- Group up to 4 apps into a named folder on any home screen slot
-- Tap a folder to expand it as a bottom sheet with app list
-- Folder contents launch normally with full gesture support
-
-### Quick Notes
-- Assign any home screen slot as a quick note
-- Tap to open a bottom sheet editor, note preview shown on the home screen
-- Notes persist across sessions
-
-### Weather Display
-- Current temperature shown on the home screen date line
-- Uses Open-Meteo API (free, no API key required)
-- Configure latitude/longitude in Settings > Wellbeing
-- 1-hour cache to minimize network usage
-
-### Screen Time Limits
-- Set soft time limits per app: 15m, 30m, 1h, 2h, or unlimited
-- Toast warning when limit is exceeded (never blocks launch)
-- Configure from the screen time graph dialog
-
-### Screen Time Graph
-- Tap the screen time display to see a 7-day usage bar chart
-- Visual breakdown by day with hours/minutes labels
-
-### Habit Streaks
-- Mark any app as a habit in the app drawer (long-press menu)
-- Daily streak counter shown next to usage time in the drawer
-- Streaks reset if you skip a day
-
-### Gesture Letters
-- Draw letter shapes on the home screen to launch assigned apps
-- Supports 10 letters: A, C, L, M, N, O, S, V, W, Z
-- Assign apps to letters in Settings > Wellbeing
-- Semi-transparent trail drawn during gesture
-
-### Swipe-Up Apps
-- Assign a per-slot swipe-up app to any home screen app
-- Swipe up on an app to launch its assigned companion app
-- Falls back to the app drawer if no swipe-up app is set
-
-### Configurable Double-Tap
-- Double-tap action is no longer limited to lock screen
-- Available actions: Lock screen, Open app, Notifications, Search, Camera, Flashlight, None
-- Configure in Settings > Wellbeing
-
-### Theme Schedule
-- Automatic dark/light theme switching
-- Three modes: Manual, Scheduled (set light/dark times), Sunrise/Sunset (location-based)
-- Uses WorkManager for reliable background switching
-
-### Custom Gestures
-- Swipe left and right can be mapped to different actions, not just apps
-- Available actions: Open app, Notifications, Search, Lock screen, Camera, Flashlight, None
-
-### Icon Packs
-- Load icons from third-party icon packs (ADW-compatible)
-- Show app icons as compound drawables on home screen text
-
-### Per-app Screen Time in App Drawer
-- Daily usage time shown next to each app in the drawer
-- Sort apps by usage time (toggle in Settings)
-- Usage-sorted order cached for instant display
-
-### Settings Backup & Restore
-- Export all settings to a JSON file in Downloads
-- Import settings from a previously exported file
-- Widget and device-specific data excluded from export
-- Android auto-backup enabled
-
-### UI Polish
-- All menus use Material bottom sheets with drag handles
-- Consistent theme-aware styling throughout
-- Wellbeing settings section for all mindfulness features
-
-### Code Quality
-- Prefs.kt refactored with indexed accessors
-- Deprecated APIs migrated to ActivityResultLauncher
-- All strings in strings.xml for localization readiness
-- Thread-safe singleton managers for all new features
-
-## Features (from original)
-
+### Minimal Home Screen
 - Text-only home screen with up to 8 pinned apps
-- Swipe gestures: up for app drawer, left/right for configurable actions, down for notifications or search
-- Double-tap to lock screen
-- Auto-launch apps by typing in the drawer
-- App renaming, hiding, and per-profile support
-- Daily wallpaper rotation
-- Date, time, and battery on home screen
-- Dark / light / system theme
-- Configurable text size and alignment
+- Swipe gestures: up for app drawer, down for notifications or search, left/right for configurable actions
+- Date, time, battery, and weather at a glance
+- Dark, light, or system theme with automatic scheduling (manual times or sunrise/sunset)
+- Configurable text size, alignment, and daily wallpaper rotation
+
+### Widgets
+- Add multiple widgets to your home screen (long-press > Add widget)
+- Per-widget height control with 5 size presets
+- Swap, remove, resize, reorder, or place widgets above or below your app list
+- Search and filter in the widget picker
+
+### Digital Wellbeing
+- **Focus Mode** — Timed sessions (25m, 1h, 2h) that block all but 5 whitelisted apps
+- **Grayscale Mode** — One-tap grayscale filter over the entire launcher
+- **Screen Time Graph** — 7-day usage bar chart, tap the home screen time display to view
+- **Screen Time Limits** — Soft per-app time limits with toast warnings when exceeded
+- **Bad Habit Apps** — Mark distracting apps with a daily time limit; a confirmation dialog asks "Open anyway?" once the limit is reached
+- **Habit Streaks** — Mark apps as daily habits; streak counter shown in the app drawer, resets if you skip a day
+- **Configurable Double-Tap** — Lock screen, open app, notifications, search, camera, flashlight, or nothing
+
+### App Drawer
+- Auto-launch apps by typing in the search bar
+- Per-app daily usage time shown next to each app
+- Sort apps by usage time
+- Long-press menu: delete, rename, hide, mark as habit, mark as bad habit, app info
+- App renaming and per-profile (work profile) support
+
+### Gestures & Shortcuts
+- **Custom Swipe Actions** — Left and right swipes can open an app, notifications, search, lock screen, camera, flashlight, or do nothing
+- **Gesture Letters** — Draw letter shapes (A, C, L, M, N, O, S, V, W, Z) on the home screen to launch assigned apps
+- **Swipe-Up Apps** — Assign a per-slot swipe-up companion app to any home screen slot
+- **App Folders** — Group up to 4 apps into a named folder on any home screen slot
+- **Quick Notes** — Pin a note to a home screen slot, tap to edit
+
+### Personalization
+- **Icon Packs** — Load icons from third-party ADW-compatible icon packs
+- **Weather Display** — Current temperature on the home screen date line via Open-Meteo (free, no API key)
+- **Theme Schedule** — Automatic dark/light switching by time or sunrise/sunset
+- **Settings Backup & Restore** — Export/import all settings as JSON; Android auto-backup enabled
 
 ## Building
 
@@ -125,8 +57,10 @@ A minimal, text-based Android launcher. Forked from [tanujnotes/Olauncher](https
 
 The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
+## Origins
+
+Originally forked from [Olauncher](https://github.com/tanujnotes/Olauncher) by [tanujnotes](https://github.com/tanujnotes). This project has since diverged significantly with a full digital wellbeing suite, multi-widget system, gesture shortcuts, and many other features.
+
 ## License
 
 [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
-
-Based on [Olauncher](https://github.com/tanujnotes/Olauncher) by [tanujnotes](https://github.com/tanujnotes).

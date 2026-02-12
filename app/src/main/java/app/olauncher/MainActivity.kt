@@ -44,12 +44,15 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private var themeCheckRetries = 0
+    }
+
     private lateinit var prefs: Prefs
     private lateinit var navController: NavController
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: ActivityMainBinding
     private var timerJob: Job? = null
-    private var themeCheckRetries = 0
 
     lateinit var appWidgetHost: AppWidgetHost
     lateinit var appWidgetManager: AppWidgetManager
@@ -92,6 +95,10 @@ class MainActivity : AppCompatActivity() {
 
         savedInstanceState?.let {
             pendingWidgetId = it.getInt("pendingWidgetId", -1)
+            val providerStr = it.getString("pendingWidgetProvider")
+            if (providerStr != null && pendingWidgetId != -1) {
+                pendingWidgetInfo = appWidgetManager.getAppWidgetInfo(pendingWidgetId)
+            }
         }
 
         bindWidgetLauncher = registerForActivityResult(
@@ -155,6 +162,7 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("pendingWidgetId", pendingWidgetId)
+        outState.putString("pendingWidgetProvider", pendingWidgetInfo?.provider?.flattenToString())
     }
 
     override fun onDestroy() {
@@ -165,13 +173,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        themeCheckRetries = 0
-        appWidgetHost.startListening()
+        try { appWidgetHost.startListening() } catch (e: Exception) { e.printStackTrace() }
         restartLauncherOrCheckTheme()
     }
 
     override fun onStop() {
-        appWidgetHost.stopListening()
+        try { appWidgetHost.stopListening() } catch (e: Exception) { e.printStackTrace() }
         super.onStop()
     }
 
@@ -285,6 +292,8 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (themeCheckRetries++ < 2)
                     restartLauncherOrCheckTheme(true)
+            } else {
+                themeCheckRetries = 0
             }
         }
     }

@@ -85,7 +85,9 @@ class GestureLetterOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 if (!isTracking) return false
 
-                points.add(PointF(event.x, event.y))
+                if (points.size < 500) {
+                    points.add(PointF(event.x, event.y))
+                }
                 drawPath.lineTo(event.x, event.y)
 
                 if (!hasExceededThreshold) {

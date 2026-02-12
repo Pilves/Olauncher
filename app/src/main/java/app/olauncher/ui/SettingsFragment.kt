@@ -41,6 +41,7 @@ import app.olauncher.helper.GestureLetterManager
 import app.olauncher.helper.IconPackManager
 import app.olauncher.helper.GrayscaleManager
 import app.olauncher.helper.ThemeScheduleManager
+import app.olauncher.helper.CityResult
 import app.olauncher.helper.WeatherManager
 import app.olauncher.helper.animateAlpha
 import app.olauncher.helper.appUsagePermissionGranted
@@ -54,6 +55,10 @@ import app.olauncher.helper.openUrl
 import app.olauncher.helper.setPlainWallpaper
 import app.olauncher.helper.showToast
 import app.olauncher.listener.DeviceAdmin
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListener {
 
@@ -101,6 +106,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         populateSortByUsage()
         populateWidgetPlacement()
         populateShowIcons()
+        populateHabitTracking()
         populateLockSettings()
         populateWallpaperText()
         populateAppThemeText()
@@ -183,6 +189,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
             R.id.widgetPlacement -> toggleWidgetPlacement()
             R.id.showIconsToggle -> toggleShowIcons()
+            R.id.habitTrackingToggle -> toggleHabitTracking()
 
             R.id.exportSettings -> exportSettings()
             R.id.importSettings -> confirmImportSettings()
@@ -190,6 +197,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.github -> requireContext().openUrl(Constants.URL_OLAUNCHER_GITHUB)
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
             R.id.focusModeToggle -> showFocusModeFromSettings()
+            R.id.screenTimeLimitsToggle -> showScreenTimeLimitsDialog()
             R.id.grayscaleToggle -> {
                 GrayscaleManager.toggle(requireContext())
                 populateWellbeingSection()
@@ -240,7 +248,10 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.focusModeToggle?.text = if (FocusModeManager.isActive(requireContext())) getString(R.string.on) else getString(R.string.off)
         binding.grayscaleToggle?.text = if (GrayscaleManager.isEnabled(requireContext())) getString(R.string.on) else getString(R.string.off)
         binding.gestureLettersToggle?.text = if (GestureLetterManager.isEnabled(requireContext())) getString(R.string.on) else getString(R.string.off)
-        binding.weatherToggle?.text = if (WeatherManager.isEnabled(requireContext())) getString(R.string.on) else getString(R.string.off)
+        binding.weatherToggle?.text = if (WeatherManager.isEnabled(requireContext())) {
+            val city = WeatherManager.getCityName(requireContext())
+            city.ifEmpty { getString(R.string.on) }
+        } else getString(R.string.off)
         binding.doubleTapAction?.text = getDoubleTapLabel()
         binding.themeScheduleToggle?.text = getThemeScheduleLabel()
     }
@@ -281,6 +292,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.sortByUsage?.setOnClickListener(this)
         binding.widgetPlacement?.setOnClickListener(this)
         binding.showIconsToggle?.setOnClickListener(this)
+        binding.habitTrackingToggle?.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
         binding.alignment.setOnClickListener(this)
@@ -329,9 +341,11 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.textSize7.setOnClickListener(this)
 
         binding.focusModeToggle?.setOnClickListener(this)
+        binding.screenTimeLimitsToggle?.setOnClickListener(this)
         binding.grayscaleToggle?.setOnClickListener(this)
         binding.doubleTapAction?.setOnClickListener(this)
         binding.gestureLettersToggle?.setOnClickListener(this)
+        binding.tvGestures?.setOnClickListener(this)
         binding.weatherToggle?.setOnClickListener(this)
         binding.themeScheduleToggle?.setOnClickListener(this)
 
@@ -723,6 +737,15 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.showIconsToggle?.text = if (prefs.showIcons) getString(R.string.on) else getString(R.string.off)
     }
 
+    private fun toggleHabitTracking() {
+        prefs.habitTrackingEnabled = !prefs.habitTrackingEnabled
+        populateHabitTracking()
+    }
+
+    private fun populateHabitTracking() {
+        binding.habitTrackingToggle?.text = if (prefs.habitTrackingEnabled) getString(R.string.on) else getString(R.string.off)
+    }
+
     private fun populateKeyboardText() {
         if (prefs.autoShowKeyboard) binding.autoShowKeyboard.text = getString(R.string.on)
         else binding.autoShowKeyboard.text = getString(R.string.off)
@@ -939,23 +962,104 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     private fun showWeatherSettingsDialog() {
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext())
         val view = layoutInflater.inflate(R.layout.dialog_weather_settings, null)
-        val latInput = view.findViewById<android.widget.EditText>(R.id.latitudeInput)
-        val lngInput = view.findViewById<android.widget.EditText>(R.id.longitudeInput)
-        val saveButton = view.findViewById<android.widget.TextView>(R.id.weatherSaveButton)
-        val (lat, lng) = WeatherManager.getLocation(requireContext())
-        latInput.setText(lat)
-        lngInput.setText(lng)
-        saveButton.setOnClickListener {
-            val newLat = latInput.text.toString().trim()
-            val newLng = lngInput.text.toString().trim()
-            if (newLat.isNotEmpty() && newLng.isNotEmpty()) {
-                WeatherManager.setLocation(requireContext(), newLat, newLng)
-                WeatherManager.setEnabled(requireContext(), true)
-                populateWellbeingSection()
+        val searchInput = view.findViewById<android.widget.EditText>(R.id.citySearchInput)
+        val statusText = view.findViewById<android.widget.TextView>(R.id.searchStatus)
+        val resultsList = view.findViewById<android.widget.ListView>(R.id.cityResultsList)
+        val currentCityLabel = view.findViewById<android.widget.TextView>(R.id.currentCityLabel)
+
+        // Show current city if configured
+        val currentCity = WeatherManager.getCityName(requireContext())
+        if (currentCity.isNotEmpty()) {
+            currentCityLabel.text = getString(R.string.current_city, currentCity)
+            currentCityLabel.visibility = View.VISIBLE
+        }
+
+        val cities = mutableListOf<CityResult>()
+        val textColor = requireContext().getColorFromAttr(R.attr.primaryColor)
+        val subtextColor = requireContext().getColorFromAttr(R.attr.primaryColorTrans50)
+
+        val adapter = object : android.widget.BaseAdapter() {
+            override fun getCount() = cities.size
+            override fun getItem(position: Int) = cities[position]
+            override fun getItemId(position: Int) = position.toLong()
+
+            override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                val city = cities[position]
+                val container = (convertView as? android.widget.LinearLayout)
+                    ?: android.widget.LinearLayout(requireContext()).apply {
+                        orientation = android.widget.LinearLayout.VERTICAL
+                        setPadding(8.dpToPx(), 10.dpToPx(), 8.dpToPx(), 10.dpToPx())
+                    }
+                container.removeAllViews()
+
+                val nameTv = android.widget.TextView(requireContext()).apply {
+                    text = city.name
+                    textSize = 16f
+                    setTextColor(textColor)
+                }
+                container.addView(nameTv)
+
+                val detailParts = mutableListOf<String>()
+                if (city.admin1.isNotEmpty()) detailParts.add(city.admin1)
+                if (city.country.isNotEmpty()) detailParts.add(city.country)
+                if (detailParts.isNotEmpty()) {
+                    val detailTv = android.widget.TextView(requireContext()).apply {
+                        text = detailParts.joinToString(", ")
+                        textSize = 13f
+                        setTextColor(subtextColor)
+                    }
+                    container.addView(detailTv)
+                }
+
+                return container
             }
+        }
+        resultsList.adapter = adapter
+
+        resultsList.setOnItemClickListener { _, _, position, _ ->
+            val city = cities[position]
+            WeatherManager.setLocation(requireContext(), city.latitude.toString(), city.longitude.toString())
+            WeatherManager.setCityName(requireContext(), city.displayName)
+            WeatherManager.setEnabled(requireContext(), true)
+            populateWellbeingSection()
             dialog.dismiss()
         }
+
+        // Debounced search
+        var searchJob: kotlinx.coroutines.Job? = null
+        searchInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                searchJob?.cancel()
+                val query = s?.toString() ?: ""
+                if (query.length < 2) {
+                    cities.clear()
+                    adapter.notifyDataSetChanged()
+                    statusText.visibility = View.GONE
+                    return
+                }
+                statusText.text = getString(R.string.searching)
+                statusText.visibility = View.VISIBLE
+                searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                    kotlinx.coroutines.delay(300)
+                    val results = WeatherManager.searchCities(query)
+                    if (!isAdded || _binding == null) return@launch
+                    cities.clear()
+                    cities.addAll(results)
+                    adapter.notifyDataSetChanged()
+                    if (results.isEmpty()) {
+                        statusText.text = getString(R.string.no_results)
+                        statusText.visibility = View.VISIBLE
+                    } else {
+                        statusText.visibility = View.GONE
+                    }
+                }
+            }
+        })
+
         dialog.setContentView(view)
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         dialog.show()
     }
 
@@ -1118,27 +1222,40 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         dialog.show()
     }
 
+    private fun showScreenTimeLimitsDialog() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !requireContext().appUsagePermissionGranted()) {
+            viewModel.showDialog.postValue(Constants.Dialog.DIGITAL_WELLBEING)
+            return
+        }
+        val usageMap = viewModel.perAppScreenTime.value ?: emptyMap()
+        ScreenTimeLimitDialog(requireContext(), usageMap).show()
+    }
+
     private fun exportSettings() {
-        try {
-            val json = prefs.exportToJson()
-            val jsonString = json.toString(2)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val json = prefs.exportToJson()
+                val jsonString = json.toString(2)
 
-            val contentValues = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, "olauncher_settings.json")
-                put(MediaStore.Downloads.MIME_TYPE, "application/json")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                withContext(Dispatchers.IO) {
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, "olauncher_settings.json")
+                        put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                        }
+                    }
+
+                    val resolver = requireContext().contentResolver
+                    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    if (uri != null) {
+                        resolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
+                    }
                 }
+                context?.showToast(getString(R.string.settings_exported))
+            } catch (e: Exception) {
+                context?.showToast(getString(R.string.settings_export_failed, e.message))
             }
-
-            val resolver = requireContext().contentResolver
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri != null) {
-                resolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
-                requireContext().showToast(getString(R.string.settings_exported))
-            }
-        } catch (e: Exception) {
-            requireContext().showToast(getString(R.string.settings_export_failed, e.message))
         }
     }
 
@@ -1204,15 +1321,21 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun importSettings(uri: android.net.Uri) {
-        try {
-            val inputStream = requireContext().contentResolver.openInputStream(uri)
-            val jsonString = inputStream?.bufferedReader()?.use { it.readText() } ?: return
-            val json = org.json.JSONObject(jsonString)
-            prefs.importFromJson(json)
-            requireContext().showToast(getString(R.string.settings_imported))
-            requireActivity().recreate()
-        } catch (e: Exception) {
-            requireContext().showToast(getString(R.string.settings_import_failed, e.message))
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val jsonString = withContext(Dispatchers.IO) {
+                    requireContext().contentResolver.openInputStream(uri)
+                        ?.bufferedReader()?.use { it.readText() }
+                }
+                if (jsonString != null) {
+                    val json = org.json.JSONObject(jsonString)
+                    prefs.importFromJson(json)
+                    context?.showToast(getString(R.string.settings_imported))
+                    requireActivity().recreate()
+                }
+            } catch (e: Exception) {
+                context?.showToast(getString(R.string.settings_import_failed, e.message))
+            }
         }
     }
 

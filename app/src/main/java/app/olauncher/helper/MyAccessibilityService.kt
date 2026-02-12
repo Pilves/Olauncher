@@ -27,7 +27,10 @@ class MyAccessibilityService : AccessibilityService() {
                     }
                 }
             } finally {
-                source.recycle()
+                if (Build.VERSION.SDK_INT < 34) {
+                    @Suppress("DEPRECATION")
+                    source.recycle()
+                }
             }
         } catch (e: Exception) {
             Log.e("AccessibilityService", "Error handling accessibility event", e)

@@ -58,6 +58,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val weatherValue = MutableLiveData<String>()
 
     var pendingGestureLetter: Char? = null
+    private var lastWeatherFetch: Long = 0L
 
     val showDialog = SingleLiveEvent<String>()
     val resetLauncherLiveData = SingleLiveEvent<Unit?>()
@@ -71,8 +72,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
                 viewModelScope.launch(Dispatchers.IO) {
-                    ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage)
-                    HabitStreakManager.recordLaunch(appContext, appModel.appPackage)
+                    try { ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage) } catch (e: Exception) { e.printStackTrace() }
+                    try { HabitStreakManager.recordLaunch(appContext, appModel.appPackage) } catch (e: Exception) { e.printStackTrace() }
                 }
             }
 
@@ -236,6 +237,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getWeather() {
         if (!WeatherManager.isEnabled(appContext)) return
+        val now = System.currentTimeMillis()
+        if (now - lastWeatherFetch < 30 * 60 * 1000L) return  // 30 min throttle
+        lastWeatherFetch = now
         viewModelScope.launch(Dispatchers.IO) {
             val temp = WeatherManager.fetchWeather(appContext)
             if (temp != null) {

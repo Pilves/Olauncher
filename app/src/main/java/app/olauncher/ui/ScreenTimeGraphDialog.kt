@@ -12,6 +12,7 @@ import app.olauncher.helper.dpToPx
 import app.olauncher.helper.getColorFromAttr
 import app.olauncher.helper.usageStats.EventLogWrapper
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import android.content.DialogInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -100,5 +101,10 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
     override fun onStop() {
         loadJob?.cancel()
         super.onStop()
+    }
+
+    override fun dismiss() {
+        loadJob?.cancel()
+        super.dismiss()
     }
 }

@@ -19,3 +19,12 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep WorkManager workers (instantiated via reflection)
+-keep class app.olauncher.helper.ThemeScheduleWorker { *; }
+-keep class app.olauncher.helper.WallpaperWorker { *; }
+
+# Keep manifest-declared components
+-keep class app.olauncher.helper.MyAccessibilityService { *; }
+-keep class app.olauncher.listener.DeviceAdmin { *; }
+-keep class app.olauncher.helper.FakeHomeActivity { *; }

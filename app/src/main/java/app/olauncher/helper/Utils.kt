@@ -1,7 +1,6 @@
 package app.olauncher.helper
 
 import android.annotation.SuppressLint
-import android.app.SearchManager
 import android.app.WallpaperManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -42,15 +41,15 @@ import app.olauncher.data.Prefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.sqrt
+
+private val collator: java.text.Collator by lazy { java.text.Collator.getInstance() }
 
 fun Context.showToast(message: String?, duration: Int = Toast.LENGTH_SHORT) {
     if (message.isNullOrBlank()) return
@@ -76,7 +75,6 @@ suspend fun getAppsList(
 
             val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
             val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-            val collator = Collator.getInstance()
 
             for (profile in userManager.userProfiles) {
                 for (app in launcherApps.getActivityList(null, profile)) {
@@ -222,8 +220,7 @@ suspend fun getBitmapFromURL(src: String?): Bitmap? {
             connection.readTimeout = 15_000
             connection.doInput = true
             connection.connect()
-            val input: InputStream = connection.inputStream
-            bitmap = BitmapFactory.decodeStream(input)
+            bitmap = connection.inputStream.use { BitmapFactory.decodeStream(it) }
         } catch (e: Exception) {
             Log.e("Utils", "Failed to decode bitmap from URL", e)
         } finally {
@@ -341,12 +338,6 @@ fun getBackupWallpaper(wallType: String): String {
     return if (wallType == Constants.WALL_TYPE_LIGHT)
         Constants.URL_DEFAULT_LIGHT_WALLPAPER
     else Constants.URL_DEFAULT_DARK_WALLPAPER
-}
-
-fun openSearch(context: Context) {
-    val intent = Intent(Intent.ACTION_WEB_SEARCH)
-    intent.putExtra(SearchManager.QUERY, "")
-    context.startActivity(intent)
 }
 
 @SuppressLint("WrongConstant", "PrivateApi")

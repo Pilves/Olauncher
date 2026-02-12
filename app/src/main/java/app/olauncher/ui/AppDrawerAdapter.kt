@@ -1,6 +1,8 @@
 package app.olauncher.ui
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.os.UserHandle
 import android.util.Log
 import android.text.Editable
@@ -18,9 +20,13 @@ import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
 import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
+import app.olauncher.data.Prefs
 import app.olauncher.databinding.AdapterAppDrawerBinding
+import app.olauncher.helper.BadHabitManager
 import app.olauncher.helper.HabitStreakManager
 import app.olauncher.helper.IconPackManager
+import app.olauncher.helper.getColorFromAttr
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.hideKeyboard
@@ -63,6 +69,7 @@ class AppDrawerAdapter(
 
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
+    private val normalizedLabels = mutableMapOf<String, String>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
         ViewHolder(AdapterAppDrawerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -98,9 +105,10 @@ class AppDrawerAdapter(
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = charSearch?.startsWith(" ")?.not() ?: true
 
-                var appFilteredList = (if (charSearch.isNullOrBlank()) appsList
+                val searchText = charSearch?.toString()?.trim() ?: ""
+                var appFilteredList = (if (searchText.isBlank()) appsList
                 else appsList.filter { app ->
-                    appLabelMatches(app.appLabel, charSearch)
+                    appLabelMatches(app.appLabel, searchText)
                 }).toMutableList()
 
                 if (sortByUsage && usageStats.isNotEmpty()) {
@@ -132,29 +140,37 @@ class AppDrawerAdapter(
                 && isBangSearch.not()
                 && flag == Constants.FLAG_LAUNCH_APP
                 && appFilteredList.size > 0
-            ) appClickListener(appFilteredList[0])
+            ) {
+                Handler(Looper.getMainLooper()).post {
+                    try { appClickListener(appFilteredList[0]) } catch (_: Exception) {}
+                }
+            }
         } catch (e: Exception) {
             Log.e("AppDrawerAdapter", "Error during auto launch", e)
         }
     }
 
-    private fun appLabelMatches(appLabel: String, charSearch: CharSequence): Boolean {
-        return (appLabel.contains(charSearch.trim(), true) or
-                Normalizer.normalize(appLabel, Normalizer.Form.NFD)
-                    .replace(DIACRITICAL_REGEX, "")
-                    .replace(SEPARATOR_REGEX, "")
-                    .contains(charSearch, true))
+    private fun appLabelMatches(appLabel: String, charSearch: String): Boolean {
+        return appLabel.contains(charSearch, true) ||
+                (normalizedLabels[appLabel] ?: appLabel).contains(charSearch, true)
     }
 
     fun setAppList(appsList: MutableList<AppModel>) {
         // Add empty app for bottom padding in recyclerview
-        appsList.add(AppModel("", null, "", "", false, android.os.Process.myUserHandle()))
-        this.appsList = appsList
+        val list = appsList.toMutableList()
+        list.add(AppModel("", null, "", "", false, android.os.Process.myUserHandle()))
+        this.appsList = list
+        normalizedLabels.clear()
+        for (app in this.appsList) {
+            normalizedLabels[app.appLabel] = Normalizer.normalize(app.appLabel, Normalizer.Form.NFD)
+                .replace(DIACRITICAL_REGEX, "")
+                .replace(SEPARATOR_REGEX, "")
+        }
         if (sortByUsage && usageStats.isNotEmpty()) {
             filter.filter("")
         } else {
-            this.appFilteredList = appsList
-            submitList(appsList.toList())
+            this.appFilteredList = list.toMutableList()
+            submitList(list.toList())
         }
     }
 
@@ -166,8 +182,8 @@ class AppDrawerAdapter(
     fun removeApp(position: Int) {
         if (position < 0 || position >= appFilteredList.size) return
         val app = appFilteredList[position]
-        appFilteredList.removeAt(position)
-        appsList.remove(app)
+        appFilteredList = appFilteredList.toMutableList().also { it.removeAt(position) }
+        appsList = appsList.toMutableList().also { it.remove(app) }
         submitList(appFilteredList.toList())
     }
 
@@ -236,9 +252,22 @@ class AppDrawerAdapter(
                             root.context.getString(R.string.adapter_show)
                         else
                             root.context.getString(R.string.adapter_hide)
+                        appHabit.text = if (HabitStreakManager.isHabitApp(root.context, appModel.appPackage))
+                            root.context.getString(R.string.unmark_habit)
+                        else
+                            root.context.getString(R.string.mark_as_habit)
                         appTitle.visibility = View.INVISIBLE
                         appHideLayout.visibility = View.VISIBLE
                         appRename.isVisible = flag != Constants.FLAG_HIDDEN_APPS
+                        val habitEnabled = Prefs(root.context).habitTrackingEnabled
+                        appHabit.isVisible = flag != Constants.FLAG_HIDDEN_APPS && habitEnabled
+                        appBadHabit.isVisible = flag != Constants.FLAG_HIDDEN_APPS && habitEnabled
+                        if (appBadHabit.isVisible) {
+                            appBadHabit.text = if (BadHabitManager.isBadHabitApp(root.context, appModel.appPackage))
+                                root.context.getString(R.string.unmark_bad_habit)
+                            else
+                                root.context.getString(R.string.bad_habit)
+                        }
                     }
                     true
                 }
@@ -293,8 +322,9 @@ class AppDrawerAdapter(
                             renameLayout.visibility = View.GONE
                         }
                         true
+                    } else {
+                        false
                     }
-                    false
                 }
                 tvSaveRename.setOnClickListener {
                     etAppRename.hideKeyboard()
@@ -316,6 +346,46 @@ class AppDrawerAdapter(
                     }
                 }
                 appInfo.setOnClickListener { appInfoListener(appModel) }
+                appHabit.setOnClickListener {
+                    if (appModel.appPackage.isNotEmpty()) {
+                        if (HabitStreakManager.isHabitApp(root.context, appModel.appPackage)) {
+                            HabitStreakManager.removeHabitApp(root.context, appModel.appPackage)
+                        } else {
+                            HabitStreakManager.addHabitApp(root.context, appModel.appPackage)
+                            // Remove from bad habits if present (mutual exclusion)
+                            BadHabitManager.removeBadHabit(root.context, appModel.appPackage)
+                        }
+                        appHideLayout.visibility = View.GONE
+                        appTitle.visibility = View.VISIBLE
+                        // Refresh streak display
+                        val streakDisplay = HabitStreakManager.getStreakDisplay(root.context, appModel.appPackage)
+                        val timeMs = usageStats[appModel.appPackage] ?: 0L
+                        if (timeMs > 0) {
+                            val usageText = root.context.formattedTimeSpent(timeMs)
+                            appUsageTime.text = if (streakDisplay != null) "$usageText · $streakDisplay" else usageText
+                            appUsageTime.visibility = View.VISIBLE
+                        } else if (streakDisplay != null) {
+                            appUsageTime.text = streakDisplay
+                            appUsageTime.visibility = View.VISIBLE
+                        } else {
+                            appUsageTime.visibility = View.GONE
+                        }
+                    }
+                }
+                appBadHabit.setOnClickListener {
+                    if (appModel.appPackage.isNotEmpty()) {
+                        if (BadHabitManager.isBadHabitApp(root.context, appModel.appPackage)) {
+                            BadHabitManager.removeBadHabit(root.context, appModel.appPackage)
+                            appHideLayout.visibility = View.GONE
+                            appTitle.visibility = View.VISIBLE
+                        } else {
+                            showBadHabitTimePicker(root.context, appModel.appPackage) {
+                                appHideLayout.visibility = View.GONE
+                                appTitle.visibility = View.VISIBLE
+                            }
+                        }
+                    }
+                }
                 appDelete.setOnClickListener { appDeleteListener(appModel) }
                 appMenuClose.setOnClickListener {
                     appHideLayout.visibility = View.GONE
@@ -337,6 +407,53 @@ class AppDrawerAdapter(
             } catch (e: Exception) {
                 appPackage
             }
+        }
+
+        private fun showBadHabitTimePicker(context: Context, packageName: String, onDone: () -> Unit) {
+            val dialog = BottomSheetDialog(context)
+            val container = android.widget.LinearLayout(context).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setBackgroundColor(context.getColorFromAttr(R.attr.primaryInverseColor))
+                setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+            }
+
+            val handle = View(context).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                    gravity = android.view.Gravity.CENTER_HORIZONTAL
+                    bottomMargin = 16.dpToPx()
+                }
+                setBackgroundColor(context.getColorFromAttr(R.attr.primaryColorTrans50))
+            }
+            container.addView(handle)
+
+            val title = android.widget.TextView(context).apply {
+                text = context.getString(R.string.select_time_limit)
+                textSize = 16f
+                setTextColor(context.getColorFromAttr(R.attr.primaryColor))
+                setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 12.dpToPx())
+            }
+            container.addView(title)
+
+            val options = listOf(15 to "15 minutes", 30 to "30 minutes", 60 to "1 hour", 120 to "2 hours")
+            for ((minutes, label) in options) {
+                val tv = android.widget.TextView(context).apply {
+                    text = label
+                    textSize = 16f
+                    setTextColor(context.getColorFromAttr(R.attr.primaryColor))
+                    setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+                    setOnClickListener {
+                        BadHabitManager.addBadHabit(context, packageName, minutes)
+                        // Remove from good habits (mutual exclusion)
+                        HabitStreakManager.removeHabitApp(context, packageName)
+                        dialog.dismiss()
+                        onDone()
+                    }
+                }
+                container.addView(tv)
+            }
+
+            dialog.setContentView(container)
+            dialog.show()
         }
     }
 }

@@ -146,6 +146,7 @@
     <string name="couldnt_bind_widget">Couldn\'t bind widget: %s</string>
     <string name="widget_setup_failed">Widget setup failed: %s</string>
     <string name="couldnt_add_widget">Couldn\'t add widget: %s</string>
+    <string name="max_widgets_reached">Maximum widgets reached</string>
     <string name="sort_apps_by_usage">Sort apps by usage</string>
     <string name="search_widgets">Search widgets…</string>
     <string name="resize_widget">Resize widget</string>
@@ -232,19 +233,30 @@
     <string name="note" translatable="false">Note</string>
     <string name="save" translatable="false">Save</string>
     <string name="write_something" translatable="false">Write something\u2026</string>
-    <string name="quick_note_slot" translatable="false">Quick note slot</string>
+    <string name="clear_note" translatable="false">Clear</string>
 
     <!-- Weather -->
     <string name="weather" translatable="false">Weather</string>
     <string name="weather_settings" translatable="false">Weather settings</string>
-    <string name="latitude" translatable="false">Latitude</string>
-    <string name="longitude" translatable="false">Longitude</string>
+    <string name="search_city" translatable="false">Search city\u2026</string>
+    <string name="searching" translatable="false">Searching\u2026</string>
+    <string name="no_results" translatable="false">No results found</string>
+    <string name="current_city" translatable="false">Current: %s</string>
 
     <!-- Habit Streaks -->
     <string name="habit_tracking" translatable="false">Habit tracking</string>
     <string name="mark_as_habit" translatable="false">Mark as habit</string>
     <string name="unmark_habit" translatable="false">Unmark habit</string>
     <string name="streak_days" translatable="false">%s streak</string>
+
+    <!-- Bad Habits -->
+    <string name="bad_habit" translatable="false">Bad habit</string>
+    <string name="unmark_bad_habit" translatable="false">Unmark bad</string>
+    <string name="mark_as_bad_habit" translatable="false">Mark as bad habit</string>
+    <string name="bad_habit_warning" translatable="false">You\u2019ve used %1$s for %2$s today (limit: %3$s)</string>
+    <string name="open_anyway" translatable="false">Open anyway</string>
+    <string name="go_back" translatable="false">Go back</string>
+    <string name="select_time_limit" translatable="false">Select daily time limit</string>
 
     <!-- Grayscale -->
     <string name="grayscale" translatable="false">Grayscale</string>

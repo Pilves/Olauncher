@@ -21,6 +21,10 @@ object ScreenTimeLimitManager {
     @Volatile
     private var cachedLimits: Map<String, Int>? = null
 
+    @Volatile
+    private var lastCheckTime: Long = 0L
+    private const val CHECK_INTERVAL_MS = 60_000L // 1 minute
+
     /**
      * Parse the CSV preference and return a map of packageName to limit in minutes.
      * Results are cached until the next write operation.
@@ -67,6 +71,10 @@ object ScreenTimeLimitManager {
      * This is a soft warning only and NEVER blocks the launch.
      */
     fun checkAndWarn(context: Context, packageName: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastCheckTime < CHECK_INTERVAL_MS) return
+        lastCheckTime = now
+
         val limits = getLimits(context)
         val limitMinutes = limits[packageName] ?: return
 
@@ -80,11 +88,13 @@ object ScreenTimeLimitManager {
             val hours = usageMinutes / 60
             val mins = usageMinutes % 60
             val usageText = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
-            Toast.makeText(
-                context,
-                "Screen time limit reached: $usageText used (limit: ${limitMinutes}m)",
-                Toast.LENGTH_LONG
-            ).show()
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Toast.makeText(
+                    context,
+                    "Screen time limit reached: $usageText used (limit: ${limitMinutes}m)",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

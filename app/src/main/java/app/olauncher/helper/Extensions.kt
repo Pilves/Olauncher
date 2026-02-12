@@ -84,15 +84,24 @@ fun Context.resetLauncherViaFakeActivity() {
 }
 
 fun Context.openSearch(query: String? = null) {
-    val intent = Intent(Intent.ACTION_WEB_SEARCH)
-    intent.putExtra(SearchManager.QUERY, query ?: "")
-    startActivity(intent)
+    try {
+        val intent = Intent(Intent.ACTION_WEB_SEARCH)
+        intent.putExtra(SearchManager.QUERY, query ?: "")
+        startActivity(intent)
+    } catch (e: Exception) {
+        showToast("No search app found")
+    }
 }
 
 fun Context.isEinkDisplay(): Boolean {
     return try {
-        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowManager.defaultDisplay.refreshRate <= Constants.MIN_ANIM_REFRESH_RATE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.refreshRate?.let { it <= Constants.MIN_ANIM_REFRESH_RATE } ?: false
+        } else {
+            @Suppress("DEPRECATION")
+            (getSystemService(Context.WINDOW_SERVICE) as WindowManager)
+                .defaultDisplay.refreshRate <= Constants.MIN_ANIM_REFRESH_RATE
+        }
     } catch (e: Exception) {
         Log.e("Extensions", "Failed to detect e-ink display", e)
         false

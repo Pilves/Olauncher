@@ -28,6 +28,9 @@ object IconPackManager {
      */
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
 
+    /** Secondary index: icon-pack package name -> (app package name -> drawableName) for O(1) fallback lookups. */
+    private val packageIndex = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
+
     /**
      * Returns a list of installed icon packs as (packageName, appLabel) pairs.
      */
@@ -68,8 +71,8 @@ object IconPackManager {
             val drawableName = (componentKey?.let { map[it] }
                 // Some packs use a shorter form without ComponentInfo wrapper
                 ?: componentKey?.let { map["$appPackage/$activityClassName"] }
-                // Fallback: try matching by package name alone (first match)
-                ?: map.entries.firstOrNull { it.key.contains(appPackage) }?.value)
+                // Fallback: O(1) lookup by package name via secondary index
+                ?: packageIndex[iconPackPackage]?.get(appPackage))
                 ?: return null
 
             val packResources = context.packageManager
@@ -113,9 +116,11 @@ object IconPackManager {
                 val rawResult = parseAppFilterFromAssets(packResources, packageName)
                 if (rawResult != null) {
                     cache[packageName] = rawResult
+                    buildPackageIndex(packageName, rawResult)
                     return rawResult
                 }
                 cache[packageName] = result
+                buildPackageIndex(packageName, result)
                 return result
             }
 
@@ -128,7 +133,24 @@ object IconPackManager {
         }
 
         cache[packageName] = result
+        buildPackageIndex(packageName, result)
         return result
+    }
+
+    /**
+     * Builds a package-name -> drawableName index from the component map
+     * for O(1) fallback lookups by package name.
+     */
+    private fun buildPackageIndex(iconPackPackage: String, map: Map<String, String>) {
+        val pkgMap = mutableMapOf<String, String>()
+        for ((component, icon) in map) {
+            val pkg = component.substringBefore("/")
+                .removePrefix("ComponentInfo{")
+            if (pkg !in pkgMap) {
+                pkgMap[pkg] = icon
+            }
+        }
+        packageIndex[iconPackPackage] = pkgMap
     }
 
     // ── Internal parsing helpers ────────────────────────────────────────
@@ -179,5 +201,6 @@ object IconPackManager {
 
     fun clearCache() {
         cache.clear()
+        packageIndex.clear()
     }
 }

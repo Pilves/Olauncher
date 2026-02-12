@@ -11,20 +11,22 @@ import kotlin.math.abs
 
 internal open class ViewSwipeTouchListener(c: Context?, v: View) : OnTouchListener {
     private var longPressOn = false
-    private val gestureDetector: GestureDetector
+    private var gestureDetector: GestureDetector?
 
     override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
-        when (motionEvent.action) {
+        when (motionEvent.actionMasked) {
             MotionEvent.ACTION_DOWN -> view.isPressed = true
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
                 view.isPressed = false
                 longPressOn = false
             }
         }
-        return gestureDetector.onTouchEvent(motionEvent)
+        return gestureDetector?.onTouchEvent(motionEvent) ?: false
     }
 
-    fun cleanup() {}
+    fun cleanup() {
+        gestureDetector = null
+    }
 
     private inner class GestureListener(private val view: View) : SimpleOnGestureListener() {
         private val SWIPE_THRESHOLD: Int = 100

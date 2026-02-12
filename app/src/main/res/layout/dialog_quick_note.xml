@@ -29,16 +29,33 @@
         android:hint="@string/write_something"
         android:padding="8dp" />
 
-    <TextView
-        android:id="@+id/noteSaveButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/save"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="?attr/primaryColor"
-        android:layout_gravity="end"
-        android:padding="12dp"
-        android:layout_marginTop="8dp" />
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/noteClearButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_note"
+            android:textSize="16sp"
+            android:textColor="?attr/primaryColorTrans50"
+            android:padding="12dp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/noteSaveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/save"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/primaryColor"
+            android:padding="12dp" />
+
+    </LinearLayout>
 
 </LinearLayout>

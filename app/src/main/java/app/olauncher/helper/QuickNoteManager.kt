@@ -6,10 +6,31 @@ object QuickNoteManager {
 
     private const val PREFS_NAME = "app.olauncher"
     private const val QUICK_NOTE_TEXT = "QUICK_NOTE_TEXT"
-    private const val QUICK_NOTE_SLOT = "QUICK_NOTE_SLOT"
+    private const val QUICK_NOTE_ENABLED = "QUICK_NOTE_ENABLED"
+    private const val QUICK_NOTE_SLOT = "QUICK_NOTE_SLOT" // old key for migration
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, 0)
+
+    private fun migrateIfNeeded(context: Context) {
+        val p = prefs(context)
+        if (p.contains(QUICK_NOTE_SLOT)) {
+            val oldSlot = p.getInt(QUICK_NOTE_SLOT, -1)
+            p.edit()
+                .putBoolean(QUICK_NOTE_ENABLED, oldSlot != -1)
+                .remove(QUICK_NOTE_SLOT)
+                .apply()
+        }
+    }
+
+    fun isEnabled(context: Context): Boolean {
+        migrateIfNeeded(context)
+        return prefs(context).getBoolean(QUICK_NOTE_ENABLED, false)
+    }
+
+    fun setEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(QUICK_NOTE_ENABLED, enabled).apply()
+    }
 
     fun getText(context: Context): String =
         prefs(context).getString(QUICK_NOTE_TEXT, "") ?: ""
@@ -17,20 +38,6 @@ object QuickNoteManager {
     fun setText(context: Context, text: String) {
         prefs(context).edit().putString(QUICK_NOTE_TEXT, text).apply()
     }
-
-    fun getSlot(context: Context): Int =
-        prefs(context).getInt(QUICK_NOTE_SLOT, -1)
-
-    fun setSlot(context: Context, slot: Int) {
-        prefs(context).edit().putInt(QUICK_NOTE_SLOT, slot).apply()
-    }
-
-    fun clearSlot(context: Context) {
-        prefs(context).edit().putInt(QUICK_NOTE_SLOT, -1).apply()
-    }
-
-    fun isNoteSlot(context: Context, slot: Int): Boolean =
-        getSlot(context) == slot
 
     fun getPreviewText(context: Context): String {
         val text = getText(context)

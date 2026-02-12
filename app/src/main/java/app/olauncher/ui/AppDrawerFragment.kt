@@ -19,7 +19,12 @@ import app.olauncher.R
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentAppDrawerBinding
+import app.olauncher.data.AppModel
+import app.olauncher.helper.BadHabitManager
+import app.olauncher.helper.ScreenTimeLimitManager
 import app.olauncher.helper.appUsagePermissionGranted
+import app.olauncher.helper.dpToPx
+import app.olauncher.helper.getColorFromAttr
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isEinkDisplay
 import app.olauncher.helper.isSystemApp
@@ -29,6 +34,11 @@ import app.olauncher.helper.openUrl
 import app.olauncher.helper.showKeyboard
 import app.olauncher.helper.showToast
 import app.olauncher.helper.uninstall
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.lifecycleScope
 
 
 class AppDrawerFragment : Fragment() {
@@ -40,6 +50,8 @@ class AppDrawerFragment : Fragment() {
     private var flag = Constants.FLAG_LAUNCH_APP
     private var canRename = false
     private var scrollListener: RecyclerView.OnScrollListener? = null
+    private val searchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var searchRunnable: Runnable? = null
 
     private val viewModel: MainViewModel by activityViewModels()
     private var _binding: FragmentAppDrawerBinding? = null
@@ -84,33 +96,37 @@ class AppDrawerFragment : Fragment() {
     private fun initSearch() {
         binding.search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
+                val ctx = context ?: return true
                 if (query?.startsWith("!") == true)
-                    requireContext().openUrl(Constants.URL_DUCK_SEARCH + query.replace(" ", "%20"))
-                else if (adapter.itemCount == 0) // && requireContext().searchOnPlayStore(query?.trim()).not())
-                    requireContext().openSearch(query?.trim())
+                    ctx.openUrl(Constants.URL_DUCK_SEARCH + query.replace(" ", "%20"))
+                else if (adapter.itemCount == 0)
+                    ctx.openSearch(query?.trim())
                 else
                     adapter.launchFirstInList()
                 return true
             }
 
             override fun onQueryTextChange(newText: String): Boolean {
-                try {
-                    adapter.filter.filter(newText) {
-                        // Show empty state when search returns no results
-                        if (_binding == null) return@filter
-                        if (adapter.itemCount == 0 && newText.isNotBlank()) {
-                            binding.appDrawerTip.text = getString(R.string.no_apps_found)
-                            binding.appDrawerTip.visibility = View.VISIBLE
-                        } else {
-                            binding.appDrawerTip.visibility = View.GONE
+                _binding?.appRename?.visibility = if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
+                searchRunnable?.let { searchHandler.removeCallbacks(it) }
+                searchRunnable = Runnable {
+                    try {
+                        adapter.filter.filter(newText) {
+                            _binding?.let { b ->
+                                if (adapter.itemCount == 0 && newText.isNotBlank()) {
+                                    b.appDrawerTip.text = getString(R.string.no_apps_found)
+                                    b.appDrawerTip.visibility = View.VISIBLE
+                                } else {
+                                    b.appDrawerTip.visibility = View.GONE
+                                }
+                            }
                         }
+                    } catch (e: Exception) {
+                        Log.e("AppDrawerFragment", "Error filtering app list", e)
                     }
-                    binding.appRename.visibility = if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
-                    return true
-                } catch (e: Exception) {
-                    Log.e("AppDrawerFragment", "Error filtering app list", e)
                 }
-                return false
+                searchHandler.postDelayed(searchRunnable!!, 150)
+                return true
             }
         })
     }
@@ -120,24 +136,31 @@ class AppDrawerFragment : Fragment() {
             flag,
             prefs.appLabelAlignment,
             appClickListener = {
-                if (it.appPackage.isEmpty())
+                if (!isAdded || it.appPackage.isEmpty())
                     return@AppDrawerAdapter
-                viewModel.selectedApp(it, flag)
-                if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
-                    findNavController().popBackStack(R.id.mainFragment, false)
-                else
-                    findNavController().popBackStack()
+                if (flag == Constants.FLAG_LAUNCH_APP && checkBadHabitAndLaunch(it)) {
+                    // Bad habit check is handling launch asynchronously
+                } else {
+                    viewModel.selectedApp(it, flag)
+                    if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
+                        findNavController().popBackStack(R.id.mainFragment, false)
+                    else
+                        findNavController().popBackStack()
+                }
             },
             appInfoListener = {
+                if (!isAdded) return@AppDrawerAdapter
+                val ctx = context ?: return@AppDrawerAdapter
                 openAppInfo(
-                    requireContext(),
+                    ctx,
                     it.user,
                     it.appPackage
                 )
                 findNavController().popBackStack(R.id.mainFragment, false)
             },
             appDeleteListener = {
-                requireContext().apply {
+                val ctx = context ?: return@AppDrawerAdapter
+                ctx.apply {
                     if (isSystemApp(it.appPackage))
                         showToast(getString(R.string.system_app_cannot_delete))
                     else
@@ -145,6 +168,7 @@ class AppDrawerFragment : Fragment() {
                 }
             },
             appHideListener = { appModel, position ->
+                if (!isAdded) return@AppDrawerAdapter
                 adapter.removeApp(position)
 
                 val newSet = mutableSetOf<String>()
@@ -159,7 +183,7 @@ class AppDrawerFragment : Fragment() {
                 if (newSet.isEmpty())
                     findNavController().popBackStack()
                 if (prefs.firstHide) {
-                    binding.search.hideKeyboard()
+                    _binding?.search?.hideKeyboard()
                     prefs.firstHide = false
                     viewModel.showDialog.postValue(Constants.Dialog.HIDDEN)
                     findNavController().navigate(R.id.action_appListFragment_to_settingsFragment2)
@@ -192,6 +216,7 @@ class AppDrawerFragment : Fragment() {
 
         binding.recyclerView.layoutManager = linearLayoutManager
         binding.recyclerView.adapter = adapter
+        binding.recyclerView.setHasFixedSize(true)
         scrollListener = getRecyclerViewOnScrollListener()
         binding.recyclerView.addOnScrollListener(scrollListener!!)
         binding.recyclerView.itemAnimator = null
@@ -294,6 +319,90 @@ class AppDrawerFragment : Fragment() {
         findNavController().popBackStack()
     }
 
+    /**
+     * Returns true if the app is a bad habit and we're handling it (async check),
+     * false if we should proceed with normal launch.
+     */
+    private fun checkBadHabitAndLaunch(appModel: AppModel): Boolean {
+        val ctx = context ?: return false
+        if (!prefs.habitTrackingEnabled) return false
+        if (!BadHabitManager.isBadHabitApp(ctx, appModel.appPackage)) return false
+        val limitMinutes = BadHabitManager.getLimit(ctx, appModel.appPackage) ?: return false
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val usageMs = withContext(Dispatchers.IO) {
+                ScreenTimeLimitManager.getUsageForApp(ctx, appModel.appPackage)
+            }
+            if (!isAdded) return@launch
+            val usageMinutes = usageMs / 60_000
+            if (usageMinutes >= limitMinutes) {
+                showBadHabitWarningDialog(appModel, usageMinutes, limitMinutes)
+            } else {
+                viewModel.selectedApp(appModel, flag)
+                findNavController().popBackStack(R.id.mainFragment, false)
+            }
+        }
+        return true
+    }
+
+    private fun showBadHabitWarningDialog(appModel: AppModel, usageMinutes: Long, limitMinutes: Int) {
+        val ctx = context ?: return
+        val appName = appModel.appLabel.ifEmpty { appModel.appPackage }
+        val hours = usageMinutes / 60
+        val mins = usageMinutes % 60
+        val usageText = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+        val limitText = if (limitMinutes >= 60) "${limitMinutes / 60}h ${limitMinutes % 60}m" else "${limitMinutes}m"
+
+        val dialog = BottomSheetDialog(ctx)
+        val container = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(ctx.getColorFromAttr(R.attr.primaryInverseColor))
+            setPadding(0, 12.dpToPx(), 0, 24.dpToPx())
+        }
+
+        val handle = android.view.View(ctx).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                bottomMargin = 16.dpToPx()
+            }
+            setBackgroundColor(ctx.getColorFromAttr(R.attr.primaryColorTrans50))
+        }
+        container.addView(handle)
+
+        val message = android.widget.TextView(ctx).apply {
+            text = ctx.getString(R.string.bad_habit_warning, appName, usageText, limitText)
+            textSize = 16f
+            setTextColor(ctx.getColorFromAttr(R.attr.primaryColor))
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 16.dpToPx())
+        }
+        container.addView(message)
+
+        val openAnyway = android.widget.TextView(ctx).apply {
+            text = ctx.getString(R.string.open_anyway)
+            textSize = 16f
+            setTextColor(ctx.getColorFromAttr(R.attr.primaryColor))
+            setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+            setOnClickListener {
+                dialog.dismiss()
+                viewModel.selectedApp(appModel, flag)
+                findNavController().popBackStack(R.id.mainFragment, false)
+            }
+        }
+        container.addView(openAnyway)
+
+        val goBack = android.widget.TextView(ctx).apply {
+            text = ctx.getString(R.string.go_back)
+            textSize = 16f
+            setTextColor(ctx.getColorFromAttr(R.attr.primaryColorTrans50))
+            setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
+            setOnClickListener { dialog.dismiss() }
+        }
+        container.addView(goBack)
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
     override fun onStart() {
         super.onStart()
         binding.search.showKeyboard(prefs.autoShowKeyboard)
@@ -305,6 +414,7 @@ class AppDrawerFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        searchRunnable?.let { searchHandler.removeCallbacks(it) }
         scrollListener?.let { binding.recyclerView.removeOnScrollListener(it) }
         scrollListener = null
         super.onDestroyView()
