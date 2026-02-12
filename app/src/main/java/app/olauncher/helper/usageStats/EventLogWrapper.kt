@@ -11,8 +11,9 @@ import java.util.function.BiConsumer
 import kotlin.math.max
 import kotlin.math.min
 
-class EventLogWrapper(private val context: Context) {
-    private val usageStatsManager by lazy { context.getSystemService("usagestats") as UsageStatsManager }
+class EventLogWrapper(context: Context) {
+    private val context: Context = context.applicationContext
+    private val usageStatsManager by lazy { this.context.getSystemService("usagestats") as UsageStatsManager }
     private val guardian = UnmatchedCloseEventGuardian(usageStatsManager)
 
 
@@ -136,8 +137,11 @@ class EventLogWrapper(private val context: Context) {
                             .mapNotNull { it.value }
                             .minOrNull() ?: event.timeStamp
 
+                        // Clamp to prevent negative duration when endTime precedes beginTime
+                        val clampedEndTime = maxOf(eventBeginTime, endTime)
+
                         componentForegroundStats.add(
-                            ComponentForegroundStat(eventBeginTime, endTime, event.packageName)
+                            ComponentForegroundStat(eventBeginTime, clampedEndTime, event.packageName)
                         )
                     }
                 }

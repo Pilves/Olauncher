@@ -113,7 +113,7 @@ fun Context.searchOnPlayStore(query: String? = null): Boolean {
         startActivity(
             Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse("https://play.google.com/store/search?q=$query&c=apps")
+                Uri.parse("https://play.google.com/store/search?q=${Uri.encode(query)}&c=apps")
             ).addFlags(
                 Intent.FLAG_ACTIVITY_NO_HISTORY or
                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT or

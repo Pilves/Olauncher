@@ -15,6 +15,9 @@ object BadHabitManager {
 
     private val lock = Any()
 
+    @Volatile
+    private var cachedHabits: Map<String, Int>? = null
+
     fun isBadHabitApp(context: Context, packageName: String): Boolean {
         return getAllBadHabits(context).containsKey(packageName)
     }
@@ -23,11 +26,22 @@ object BadHabitManager {
         return getAllBadHabits(context)[packageName]
     }
 
+    /**
+     * Returns the daily limit in minutes if the package is a bad-habit app, or null otherwise.
+     * Combined atomic lookup that avoids separate isBadHabitApp() + getLimit() calls.
+     */
+    fun getLimitIfBadHabit(context: Context, packageName: String): Int? {
+        synchronized(lock) {
+            return getAllBadHabitsInternal(context)[packageName]
+        }
+    }
+
     fun addBadHabit(context: Context, packageName: String, minutes: Int) {
         synchronized(lock) {
             val habits = getAllBadHabitsInternal(context).toMutableMap()
             habits[packageName] = minutes
             save(context, habits)
+            cachedHabits = null
         }
     }
 
@@ -36,6 +50,7 @@ object BadHabitManager {
             val habits = getAllBadHabitsInternal(context).toMutableMap()
             habits.remove(packageName)
             save(context, habits)
+            cachedHabits = null
         }
     }
 
@@ -46,9 +61,14 @@ object BadHabitManager {
     }
 
     private fun getAllBadHabitsInternal(context: Context): Map<String, Int> {
+        cachedHabits?.let { return it }
+
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val csv = prefs.getString(KEY_BAD_HABIT_APPS, "") ?: ""
-        if (csv.isBlank()) return emptyMap()
+        if (csv.isBlank()) {
+            cachedHabits = emptyMap()
+            return emptyMap()
+        }
         val result = mutableMapOf<String, Int>()
         csv.split(",").forEach { entry ->
             val parts = entry.split("=")
@@ -60,6 +80,7 @@ object BadHabitManager {
                 }
             }
         }
+        cachedHabits = result
         return result
     }
 

@@ -12,6 +12,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import androidx.appcompat.app.AlertDialog
 import androidx.activity.OnBackPressedCallback
@@ -19,6 +20,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -38,15 +40,15 @@ import app.olauncher.helper.showLauncherSelector
 import app.olauncher.helper.showToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        private var themeCheckRetries = 0
-    }
+    private var themeCheckRetries = 0
+    private var isRecreating = false
 
     private lateinit var prefs: Prefs
     private lateinit var navController: NavController
@@ -173,12 +175,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        try { appWidgetHost.startListening() } catch (e: Exception) { e.printStackTrace() }
+        try { appWidgetHost.startListening() } catch (e: Exception) { Log.e("MainActivity", "Widget host error", e) }
         restartLauncherOrCheckTheme()
     }
 
     override fun onStop() {
-        try { appWidgetHost.stopListening() } catch (e: Exception) { e.printStackTrace() }
+        try { appWidgetHost.stopListening() } catch (e: Exception) { Log.e("MainActivity", "Widget host error", e) }
         super.onStop()
     }
 
@@ -195,7 +197,8 @@ class MainActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         AppCompatDelegate.setDefaultNightMode(prefs.appTheme)
-        if (prefs.dailyWallpaper && AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) {
+        if (!isRecreating && prefs.dailyWallpaper && AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) {
+            isRecreating = true
             setPlainWallpaper()
             viewModel.setWallpaperWorker()
             recreate()
@@ -213,6 +216,7 @@ class MainActivity : AppCompatActivity() {
                 showLauncherSelector(launcherSelectorLauncher)
         }
         viewModel.showDialog.observe(this) {
+            if (isFinishing || isDestroyed) return@observe
             when (it) {
                 Constants.Dialog.HIDDEN -> {
                     AlertDialog.Builder(this)
@@ -253,6 +257,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun backToHomeScreen() {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
         if (navController.currentDestination?.id != R.id.mainFragment)
             navController.popBackStack(R.id.mainFragment, false)
     }
@@ -274,8 +279,8 @@ class MainActivity : AppCompatActivity() {
         if (forceRestart || prefs.launcherRestartTimestamp.hasBeenHours(4)) {
             prefs.launcherRestartTimestamp = System.currentTimeMillis()
             lifecycleScope.launch(Dispatchers.IO) {
-                cacheDir.deleteRecursively()
-                withContext(Dispatchers.Main) {
+                try { cacheDir.deleteRecursively() } catch (_: Exception) {}
+                withContext(Dispatchers.Main + NonCancellable) {
                     recreate()
                 }
             }

@@ -10,7 +10,10 @@ import app.olauncher.data.Prefs
 
 class MyAccessibilityService : AccessibilityService() {
 
+    private var lockDescription: String = ""
+
     override fun onServiceConnected() {
+        lockDescription = getString(R.string.lock_layout_description)
         Prefs(applicationContext).lockModeOn = true
         super.onServiceConnected()
     }
@@ -20,7 +23,7 @@ class MyAccessibilityService : AccessibilityService() {
             val source: AccessibilityNodeInfo = event.source ?: return
             try {
                 if ((source.className == "android.widget.FrameLayout") &&
-                    (source.contentDescription == getString(R.string.lock_layout_description))
+                    (source.contentDescription == lockDescription)
                 ) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)

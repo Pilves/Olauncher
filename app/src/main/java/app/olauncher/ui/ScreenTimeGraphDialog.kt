@@ -70,11 +70,13 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!context.appUsagePermissionGranted()) return
 
+        val appContext = context.applicationContext
         loadJob = CoroutineScope(Dispatchers.Main + Job()).launch {
             val data = withContext(Dispatchers.IO) {
-                val wrapper = EventLogWrapper(context)
+                val wrapper = EventLogWrapper(appContext)
                 val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
                 val calendar = Calendar.getInstance()
+                val now = System.currentTimeMillis()
 
                 val result = mutableListOf<Pair<String, Long>>()
 
@@ -84,7 +86,7 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
                     val totalMs = wrapper.aggregateSimpleUsageStats(aggregated)
 
                     // Get the day abbreviation
-                    calendar.timeInMillis = System.currentTimeMillis()
+                    calendar.timeInMillis = now
                     calendar.add(Calendar.DAY_OF_YEAR, -offset)
                     val dayLabel = dayFormat.format(calendar.time)
 
@@ -96,6 +98,11 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
 
             graphView.setData(data)
         }
+    }
+
+    override fun onDestroy() {
+        loadJob?.cancel()
+        super.onDestroy()
     }
 
     override fun onStop() {

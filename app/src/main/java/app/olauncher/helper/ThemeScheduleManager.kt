@@ -1,6 +1,7 @@
 package app.olauncher.helper
 
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -49,13 +50,19 @@ object ThemeScheduleManager {
     }
 
     fun startWorker(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
+
         val workRequest = PeriodicWorkRequestBuilder<ThemeScheduleWorker>(
-            60, TimeUnit.MINUTES
-        ).addTag(WORKER_TAG).build()
+            3, TimeUnit.HOURS  // reduced from 60 min - theme offset by up to 3h is acceptable
+        ).setConstraints(constraints)
+         .addTag(WORKER_TAG)
+         .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORKER_TAG,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.REPLACE,
             workRequest
         )
     }
@@ -90,8 +97,18 @@ object ThemeScheduleManager {
                     } catch (_: Exception) { LocalTime.of(19, 0) }
                     isInDarkPeriod(now, lightTime, darkTime)
                 } else {
-                    val lat = latStr.toDoubleOrNull() ?: return false
-                    val lng = lngStr.toDoubleOrNull() ?: return false
+                    val lat = latStr.toDoubleOrNull()
+                    val lng = lngStr.toDoubleOrNull()
+                    if (lat == null || lng == null) {
+                        // Fall back to scheduled times if lat/lng parsing fails
+                        val lightTime = try {
+                            LocalTime.parse(getLightTime(context), timeFormatter)
+                        } catch (_: Exception) { LocalTime.of(7, 0) }
+                        val darkTime = try {
+                            LocalTime.parse(getDarkTime(context), timeFormatter)
+                        } catch (_: Exception) { LocalTime.of(19, 0) }
+                        return isInDarkPeriod(now, lightTime, darkTime)
+                    }
                     val (sunrise, sunset) = SunriseSunsetCalculator.calculate(lat, lng, LocalDate.now())
                     now.isBefore(sunrise) || now.isAfter(sunset)
                 }

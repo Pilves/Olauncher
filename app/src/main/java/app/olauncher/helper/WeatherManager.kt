@@ -153,17 +153,18 @@ object WeatherManager {
             val temperature = currentWeather.getDouble("temperature")
             val formatted = "${temperature.toInt()}\u00B0"
 
-            synchronized(this@WeatherManager) {
-                p.edit()
-                    .putString(WEATHER_CACHED_TEMP, formatted)
-                    .putLong(WEATHER_LAST_FETCHED, now)
-                    .apply()
-            }
+            p.edit()
+                .putString(WEATHER_CACHED_TEMP, formatted)
+                .putLong(WEATHER_LAST_FETCHED, now)
+                .apply()
 
             formatted
         } catch (e: Exception) {
             Log.e("WeatherManager", "Failed to fetch weather", e)
-            null
+            // Backoff: don't retry for 10 minutes on failure
+            p.edit().putLong(WEATHER_LAST_FETCHED, now - FETCH_INTERVAL_MS + 10 * 60 * 1000L).apply()
+            val cached = getCachedTemp(context)
+            cached.ifEmpty { null }
         } finally {
             connection?.disconnect()
         }

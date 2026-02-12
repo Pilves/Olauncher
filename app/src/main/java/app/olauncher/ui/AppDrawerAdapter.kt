@@ -57,19 +57,19 @@ class AppDrawerAdapter(
         private val SEPARATOR_REGEX = Regex("[-_+,. ]")
     }
 
-    private var autoLaunch = true
-    private var isBangSearch = false
+    @Volatile private var autoLaunch = true
+    @Volatile private var isBangSearch = false
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
 
-    var usageStats: Map<String, Long> = emptyMap()
+    @Volatile var usageStats: Map<String, Long> = emptyMap()
     var sortByUsage: Boolean = false
     var showIcons: Boolean = false
     var iconPackPackage: String = ""
 
-    var appsList: MutableList<AppModel> = mutableListOf()
-    var appFilteredList: MutableList<AppModel> = mutableListOf()
-    private val normalizedLabels = mutableMapOf<String, String>()
+    @Volatile var appsList: MutableList<AppModel> = mutableListOf()
+    @Volatile var appFilteredList: MutableList<AppModel> = mutableListOf()
+    @Volatile private var normalizedLabels: Map<String, String> = emptyMap()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
         ViewHolder(AdapterAppDrawerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -105,14 +105,17 @@ class AppDrawerAdapter(
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = charSearch?.startsWith(" ")?.not() ?: true
 
+                val snapshot = appsList.toList()
+                val statsSnapshot = usageStats
+
                 val searchText = charSearch?.toString()?.trim() ?: ""
-                var appFilteredList = (if (searchText.isBlank()) appsList
-                else appsList.filter { app ->
+                var appFilteredList = (if (searchText.isBlank()) snapshot
+                else snapshot.filter { app ->
                     appLabelMatches(app.appLabel, searchText)
                 }).toMutableList()
 
-                if (sortByUsage && usageStats.isNotEmpty()) {
-                    appFilteredList = appFilteredList.sortedByDescending { usageStats[it.appPackage] ?: 0L }.toMutableList()
+                if (sortByUsage && statsSnapshot.isNotEmpty()) {
+                    appFilteredList = appFilteredList.sortedByDescending { statsSnapshot[it.appPackage] ?: 0L }.toMutableList()
                 }
 
                 val filterResults = FilterResults()
@@ -125,24 +128,25 @@ class AppDrawerAdapter(
                 results?.values?.let {
                     val items = (it as? MutableList<AppModel>) ?: (it as? List<AppModel>)?.toMutableList() ?: return
                     appFilteredList = items
-                    submitList(appFilteredList.toList()) {
-                        autoLaunch()
+                    val currentFiltered = appFilteredList.toList()
+                    submitList(currentFiltered) {
+                        autoLaunch(currentFiltered)
                     }
                 }
             }
         }
     }
 
-    private fun autoLaunch() {
+    private fun autoLaunch(filteredSnapshot: List<AppModel>) {
         try {
             if (itemCount == 1
                 && autoLaunch
                 && isBangSearch.not()
                 && flag == Constants.FLAG_LAUNCH_APP
-                && appFilteredList.size > 0
+                && filteredSnapshot.isNotEmpty()
             ) {
                 Handler(Looper.getMainLooper()).post {
-                    try { appClickListener(appFilteredList[0]) } catch (_: Exception) {}
+                    try { appClickListener(filteredSnapshot[0]) } catch (_: Exception) {}
                 }
             }
         } catch (e: Exception) {
@@ -160,12 +164,13 @@ class AppDrawerAdapter(
         val list = appsList.toMutableList()
         list.add(AppModel("", null, "", "", false, android.os.Process.myUserHandle()))
         this.appsList = list
-        normalizedLabels.clear()
-        for (app in this.appsList) {
-            normalizedLabels[app.appLabel] = Normalizer.normalize(app.appLabel, Normalizer.Form.NFD)
+        val newLabels = mutableMapOf<String, String>()
+        for (app in list) {
+            newLabels[app.appLabel] = Normalizer.normalize(app.appLabel, Normalizer.Form.NFD)
                 .replace(DIACRITICAL_REGEX, "")
                 .replace(SEPARATOR_REGEX, "")
         }
+        normalizedLabels = newLabels
         if (sortByUsage && usageStats.isNotEmpty()) {
             filter.filter("")
         } else {
@@ -206,6 +211,17 @@ class AppDrawerAdapter(
             iconPackPackage: String = "",
         ) =
             with(binding) {
+                if (appModel.appPackage.isEmpty()) {
+                    appTitle.text = ""
+                    appTitle.setOnClickListener(null)
+                    appTitle.setOnLongClickListener(null)
+                    appUsageTime.visibility = View.GONE
+                    appTitle.setCompoundDrawablesRelative(null, null, null, null)
+                    otherProfileIndicator.isVisible = false
+                    appHideLayout.visibility = View.GONE
+                    renameLayout.visibility = View.GONE
+                    return
+                }
                 appHideLayout.visibility = View.GONE
                 renameLayout.visibility = View.GONE
                 appTitle.visibility = View.VISIBLE
@@ -273,13 +289,40 @@ class AppDrawerAdapter(
                 }
                 appRename.setOnClickListener {
                     if (appModel.appPackage.isNotEmpty()) {
-                        etAppRename.hint = getAppName(etAppRename.context, appModel.appPackage)
+                        val appNameHint = getAppName(etAppRename.context, appModel.appPackage)
+                        etAppRename.hint = appNameHint
                         etAppRename.setText(appModel.appLabel)
                         etAppRename.setSelectAllOnFocus(true)
                         renameLayout.visibility = View.VISIBLE
                         appHideLayout.visibility = View.GONE
                         etAppRename.showKeyboard()
                         etAppRename.imeOptions = EditorInfo.IME_ACTION_DONE;
+
+                        currentTextWatcher?.let { etAppRename.removeTextChangedListener(it) }
+                        val watcher = object : TextWatcher {
+                            override fun afterTextChanged(s: Editable?) {
+                                etAppRename.hint = appNameHint
+                            }
+
+                            override fun beforeTextChanged(
+                                s: CharSequence?,
+                                start: Int,
+                                count: Int,
+                                after: Int,
+                            ) {
+                            }
+
+                            override fun onTextChanged(
+                                s: CharSequence?,
+                                start: Int,
+                                before: Int,
+                                count: Int,
+                            ) {
+                                etAppRename.hint = ""
+                            }
+                        }
+                        currentTextWatcher = watcher
+                        etAppRename.addTextChangedListener(watcher)
                     }
                 }
                 etAppRename.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
@@ -288,32 +331,6 @@ class AppDrawerAdapter(
                     else
                         appTitle.visibility = View.VISIBLE
                 }
-                currentTextWatcher?.let { etAppRename.removeTextChangedListener(it) }
-                val appNameHint = getAppName(etAppRename.context, appModel.appPackage)
-                val watcher = object : TextWatcher {
-                    override fun afterTextChanged(s: Editable?) {
-                        etAppRename.hint = appNameHint
-                    }
-
-                    override fun beforeTextChanged(
-                        s: CharSequence?,
-                        start: Int,
-                        count: Int,
-                        after: Int,
-                    ) {
-                    }
-
-                    override fun onTextChanged(
-                        s: CharSequence?,
-                        start: Int,
-                        before: Int,
-                        count: Int,
-                    ) {
-                        etAppRename.hint = ""
-                    }
-                }
-                currentTextWatcher = watcher
-                etAppRename.addTextChangedListener(watcher)
                 etAppRename.setOnEditorActionListener { _, actionCode, _ ->
                     if (actionCode == EditorInfo.IME_ACTION_DONE) {
                         val renameLabel = etAppRename.text.toString().trim()

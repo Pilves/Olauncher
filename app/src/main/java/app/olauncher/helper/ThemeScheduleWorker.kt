@@ -1,6 +1,7 @@
 package app.olauncher.helper
 
 import android.content.Context
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -18,7 +19,8 @@ class ThemeScheduleWorker(appContext: Context, workerParams: WorkerParameters) :
 
         val shouldBeDark = try {
             ThemeScheduleManager.shouldBeDark(applicationContext)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("ThemeScheduleWorker", "Failed to determine theme schedule", e)
             return Result.success()
         }
 
@@ -39,7 +41,7 @@ class ThemeScheduleWorker(appContext: Context, workerParams: WorkerParameters) :
 
             prefs.edit()
                 .putInt(Prefs.KEY_APP_THEME, newTheme)
-                .putLong(Prefs.KEY_LAUNCHER_RECREATE_TIMESTAMP, System.currentTimeMillis())
+                .putBoolean("THEME_CHANGED_BY_WORKER", true)
                 .apply()
         }
 

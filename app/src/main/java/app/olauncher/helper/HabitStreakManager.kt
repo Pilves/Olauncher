@@ -15,9 +15,13 @@ object HabitStreakManager {
     private const val KEY_HABIT_APPS = "HABIT_APPS"
     private const val KEY_HABIT_STREAK_DATA = "HABIT_STREAK_DATA"
 
-    private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000L
-
     private val lock = Any()
+
+    @Volatile
+    private var cachedHabitApps: Set<String>? = null
+
+    @Volatile
+    private var cachedStreakData: Map<String, Pair<Long, Int>>? = null
 
     /**
      * Returns true if the given package is marked as a habit app.
@@ -37,6 +41,7 @@ object HabitStreakManager {
                 .edit()
                 .putString(KEY_HABIT_APPS, apps.joinToString(","))
                 .apply()
+            cachedHabitApps = null
         }
     }
 
@@ -56,6 +61,8 @@ object HabitStreakManager {
                 .putString(KEY_HABIT_APPS, apps.joinToString(","))
                 .putString(KEY_HABIT_STREAK_DATA, serializeStreakData(streaks))
                 .apply()
+            cachedHabitApps = null
+            cachedStreakData = null
         }
     }
 
@@ -100,16 +107,23 @@ object HabitStreakManager {
                 .edit()
                 .putString(KEY_HABIT_STREAK_DATA, serializeStreakData(streaks))
                 .apply()
+            cachedStreakData = null
         }
     }
 
     /**
      * Returns the current streak count for the given package, or 0 if not tracked.
+     * Checks freshness: if the last recorded day is more than 1 day ago, the streak is broken.
      */
     fun getStreak(context: Context, packageName: String): Int {
         synchronized(lock) {
-            val data = parseStreakData(context)[packageName] ?: return 0
-            return data.second
+            val (lastDay, count) = parseStreakData(context)[packageName] ?: return 0
+            val today = currentEpochDay()
+            return when {
+                today == lastDay -> count       // recorded today
+                today == lastDay + 1 -> count   // streak still valid, not yet recorded today
+                else -> 0                        // streak broken
+            }
         }
     }
 
@@ -130,9 +144,20 @@ object HabitStreakManager {
         synchronized(lock) {
             val apps = getHabitAppsInternal(context)
             val streaks = parseStreakData(context)
+            val today = currentEpochDay()
             val result = mutableMapOf<String, Int>()
             for (app in apps) {
-                result[app] = streaks[app]?.second ?: 0
+                val data = streaks[app]
+                if (data != null) {
+                    val (lastDay, count) = data
+                    result[app] = when {
+                        today == lastDay -> count
+                        today == lastDay + 1 -> count
+                        else -> 0
+                    }
+                } else {
+                    result[app] = 0
+                }
             }
             return result
         }
@@ -140,20 +165,23 @@ object HabitStreakManager {
 
     // --- Internal helpers ---
 
-    private fun currentEpochDay(): Long {
-        val cal = java.util.Calendar.getInstance()
-        val offset = cal.get(java.util.Calendar.ZONE_OFFSET) + cal.get(java.util.Calendar.DST_OFFSET)
-        return (System.currentTimeMillis() + offset) / MILLIS_PER_DAY
-    }
+    private fun currentEpochDay(): Long = java.time.LocalDate.now().toEpochDay()
 
     private fun getHabitAppsInternal(context: Context): Set<String> {
+        cachedHabitApps?.let { return it }
+
         val prefs = context.getSharedPreferences(PREFS_NAME, 0)
         val csv = prefs.getString(KEY_HABIT_APPS, "") ?: ""
-        if (csv.isBlank()) return emptySet()
-        return csv.split(",")
+        if (csv.isBlank()) {
+            cachedHabitApps = emptySet()
+            return emptySet()
+        }
+        val result = csv.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .toSet()
+        cachedHabitApps = result
+        return result
     }
 
     /**
@@ -162,9 +190,14 @@ object HabitStreakManager {
      * Returns map of packageName to (lastEpochDay, count).
      */
     private fun parseStreakData(context: Context): Map<String, Pair<Long, Int>> {
+        cachedStreakData?.let { return it }
+
         val prefs = context.getSharedPreferences(PREFS_NAME, 0)
         val csv = prefs.getString(KEY_HABIT_STREAK_DATA, "") ?: ""
-        if (csv.isBlank()) return emptyMap()
+        if (csv.isBlank()) {
+            cachedStreakData = emptyMap()
+            return emptyMap()
+        }
 
         val result = mutableMapOf<String, Pair<Long, Int>>()
         for (entry in csv.split(",")) {
@@ -176,6 +209,7 @@ object HabitStreakManager {
                 result[pkg] = Pair(lastDay, count)
             }
         }
+        cachedStreakData = result
         return result
     }
 

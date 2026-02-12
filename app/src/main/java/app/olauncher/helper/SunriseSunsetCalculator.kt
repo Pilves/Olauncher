@@ -26,6 +26,11 @@ object SunriseSunsetCalculator {
         // Solar declination in degrees
         val declination = 23.45 * sin(Math.toRadians(360.0 / 365 * (dayOfYear - 81)))
 
+        // Equation of Time correction
+        val b = Math.toRadians(360.0 / 365.0 * (dayOfYear - 81))
+        val eotMinutes = 9.87 * sin(2 * b) - 7.53 * cos(b) - 1.5 * sin(b)
+        val solarNoonUtcHours = 12.0 - lng / 15.0 - eotMinutes / 60.0
+
         // Hour angle in degrees
         val latRad = Math.toRadians(lat)
         val declRad = Math.toRadians(declination)
@@ -43,12 +48,13 @@ object SunriseSunsetCalculator {
 
         val hourAngleDeg = Math.toDegrees(acos(cosHourAngle))
 
-        // Sunrise and sunset in hours (UTC, solar noon at 12:00 UTC for longitude 0)
-        val sunriseUtcHours = 12.0 - hourAngleDeg / 15.0 - lng / 15.0
-        val sunsetUtcHours = 12.0 + hourAngleDeg / 15.0 - lng / 15.0
+        // Sunrise and sunset in hours (UTC) relative to solar noon with EoT correction
+        val sunriseUtcHours = solarNoonUtcHours - hourAngleDeg / 15.0
+        val sunsetUtcHours = solarNoonUtcHours + hourAngleDeg / 15.0
 
-        // Apply timezone offset
-        val zoneOffset = ZoneId.systemDefault().rules.getOffset(date.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        // Apply timezone offset (use noon instant for DST accuracy)
+        val noonInstant = date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant()
+        val zoneOffset = ZoneId.systemDefault().rules.getOffset(noonInstant)
         val offsetHours = zoneOffset.totalSeconds / 3600.0
 
         val sunriseLocal = sunriseUtcHours + offsetHours

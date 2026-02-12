@@ -61,10 +61,20 @@ object FocusModeManager {
     /**
      * Returns true if the given app is allowed to launch.
      * An app is allowed if focus mode is not active OR the app is in the whitelist.
+     * Reads SharedPreferences once to avoid redundant lookups from isActive() + getWhitelist().
      */
     fun isAppAllowed(context: Context, packageName: String): Boolean {
-        if (!isActive(context)) return true
-        return getWhitelist(context).contains(packageName)
+        val p = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!p.getBoolean(KEY_ENABLED, false)) return true
+        val endTime = p.getLong(KEY_END_TIME, END_TIME_UNLIMITED)
+        if (endTime != END_TIME_UNLIMITED && System.currentTimeMillis() > endTime) return true
+        val csv = p.getString(KEY_WHITELIST, "") ?: ""
+        if (csv.isBlank()) return false
+        val whitelist = csv.split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+        return packageName in whitelist
     }
 
     /**

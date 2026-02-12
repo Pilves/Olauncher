@@ -105,7 +105,7 @@ suspend fun getAppsList(
                     }
                 }
             }
-            appList.sortBy { it.appLabel.lowercase() }
+            appList.sortWith(compareBy { it.key })
 
         } catch (e: Exception) {
             Log.e("Utils", "Failed to get apps list", e)
@@ -173,8 +173,8 @@ fun setPlainWallpaperByTheme(context: Context, appTheme: Int) {
 }
 
 fun setPlainWallpaper(context: Context, color: Int) {
+    val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
     try {
-        val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(context.getColor(color))
         val manager = WallpaperManager.getInstance(context)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -182,9 +182,10 @@ fun setPlainWallpaper(context: Context, color: Int) {
             manager.setBitmap(bitmap, null, false, WallpaperManager.FLAG_LOCK)
         } else
             manager.setBitmap(bitmap)
-        bitmap.recycle()
     } catch (e: Exception) {
         Log.e("Utils", "Failed to set plain wallpaper", e)
+    } finally {
+        bitmap.recycle()
     }
 }
 
@@ -263,8 +264,10 @@ suspend fun getWallpaperBitmap(originalImage: Bitmap, width: Int, height: Int): 
 suspend fun setWallpaper(appContext: Context, url: String): Boolean {
     return withContext(Dispatchers.IO) {
         val originalImageBitmap = getBitmapFromURL(url) ?: return@withContext false
-        if (appContext.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && isTablet(appContext).not())
+        if (appContext.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && isTablet(appContext).not()) {
+            originalImageBitmap.recycle()
             return@withContext false
+        }
 
         val wallpaperManager = WallpaperManager.getInstance(appContext)
         val (width, height) = getScreenDimensions(appContext)

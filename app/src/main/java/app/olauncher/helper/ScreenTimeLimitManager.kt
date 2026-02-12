@@ -21,8 +21,7 @@ object ScreenTimeLimitManager {
     @Volatile
     private var cachedLimits: Map<String, Int>? = null
 
-    @Volatile
-    private var lastCheckTime: Long = 0L
+    private val lastCheckTimes = mutableMapOf<String, Long>()
     private const val CHECK_INTERVAL_MS = 60_000L // 1 minute
 
     /**
@@ -72,8 +71,9 @@ object ScreenTimeLimitManager {
      */
     fun checkAndWarn(context: Context, packageName: String) {
         val now = System.currentTimeMillis()
-        if (now - lastCheckTime < CHECK_INTERVAL_MS) return
-        lastCheckTime = now
+        val lastCheck = lastCheckTimes[packageName] ?: 0L
+        if (now - lastCheck < CHECK_INTERVAL_MS) return
+        lastCheckTimes[packageName] = now
 
         val limits = getLimits(context)
         val limitMinutes = limits[packageName] ?: return

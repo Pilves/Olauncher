@@ -43,6 +43,10 @@ import java.util.concurrent.TimeUnit
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val appContext by lazy { application.applicationContext }
     private val prefs = Prefs(appContext)
+    private val launcherApps by lazy {
+        appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    }
+    private val eventLogWrapper by lazy { EventLogWrapper(appContext) }
 
     val firstOpen = MutableLiveData<Boolean>()
     val refreshHome = MutableLiveData<Boolean>()
@@ -164,17 +168,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun launchApp(packageName: String, activityClassName: String?, userHandle: UserHandle) {
         viewModelScope.launch {
-            val launcher = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
             val component = withContext(Dispatchers.IO) {
-                val activityInfo = launcher.getActivityList(packageName, userHandle)
-                if (activityClassName.isNullOrBlank()) {
-                    when (activityInfo.size) {
-                        0 -> null
-                        1 -> ComponentName(packageName, activityInfo[0].name)
-                        else -> ComponentName(packageName, activityInfo[activityInfo.size - 1].name)
+                try {
+                    val activityInfo = launcherApps.getActivityList(packageName, userHandle)
+                    if (activityClassName.isNullOrBlank()) {
+                        when (activityInfo.size) {
+                            0 -> null
+                            1 -> ComponentName(packageName, activityInfo[0].name)
+                            else -> ComponentName(packageName, activityInfo[activityInfo.size - 1].name)
+                        }
+                    } else {
+                        ComponentName(packageName, activityClassName)
                     }
-                } else {
-                    ComponentName(packageName, activityClassName)
+                } catch (e: Exception) {
+                    Log.e("MainViewModel", "Failed to resolve activity for $packageName", e)
+                    null
                 }
             }
             if (component == null) {
@@ -182,10 +190,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             try {
-                launcher.startMainActivity(component, userHandle, null, null)
+                launcherApps.startMainActivity(component, userHandle, null, null)
             } catch (e: SecurityException) {
                 try {
-                    launcher.startMainActivity(component, android.os.Process.myUserHandle(), null, null)
+                    launcherApps.startMainActivity(component, android.os.Process.myUserHandle(), null, null)
                 } catch (e: Exception) {
                     appContext.showToast(appContext.getString(R.string.unable_to_open_app))
                 }
@@ -261,14 +269,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateHomeAlignment(gravity: Int) {
         prefs.homeAlignment = gravity
-        homeAppAlignment.value = prefs.homeAlignment
+        homeAppAlignment.value = gravity
     }
 
     fun getTodaysScreenTime() {
         if (prefs.screenTimeLastUpdated.hasBeenMinutes(1).not()) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val eventLogWrapper = EventLogWrapper(appContext)
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -293,7 +300,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val eventLogWrapper = EventLogWrapper(appContext)
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)

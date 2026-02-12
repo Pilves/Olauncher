@@ -21,6 +21,7 @@ class ScreenTimeGraphView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var data: List<Pair<String, Long>> = emptyList()
+    private var precomputedLabels: List<String> = emptyList()
 
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColorFromAttr(R.attr.primaryColor)
@@ -40,11 +41,17 @@ class ScreenTimeGraphView @JvmOverloads constructor(
     }
 
     private val rect = RectF()
-    private val topPadding by lazy { 24.dpToPx().toFloat() }
-    private val bottomPadding by lazy { 20.dpToPx().toFloat() }
-    private val sidePadding by lazy { 12.dpToPx().toFloat() }
+    private val topPadding = 24.dpToPx().toFloat()
+    private val bottomPadding = 20.dpToPx().toFloat()
+    private val sidePadding = 12.dpToPx().toFloat()
     private val barCornerRadius = 4.dpToPx().toFloat()
     private val intrinsicHeightPx = 200.dpToPx()
+    private val labelPaddingTop = 40.dpToPx().toFloat()
+    private val barSpacing = 4.dpToPx().toFloat()
+    private val barMinHeight = 2.dpToPx().toFloat()
+    private val maxBarWidthPx = 40.dpToPx().toFloat()
+    private val textAboveBarPadding = 4.dpToPx().toFloat()
+    private val labelBelowBarPadding = 2.dpToPx().toFloat()
 
     /**
      * Set the data to display. Each pair is (dayLabel, milliseconds).
@@ -52,6 +59,15 @@ class ScreenTimeGraphView @JvmOverloads constructor(
      */
     fun setData(data: List<Pair<String, Long>>) {
         this.data = data
+        precomputedLabels = data.map { (_, millis) ->
+            val hours = millis / 3_600_000.0
+            if (hours >= 1.0) {
+                String.format("%.1fh", hours)
+            } else {
+                val mins = millis / 60_000
+                "${mins}m"
+            }
+        }
         invalidate()
     }
 
@@ -79,7 +95,7 @@ class ScreenTimeGraphView @JvmOverloads constructor(
         val availableHeight = height.toFloat() - topPadding - bottomPadding
 
         val slotWidth = availableWidth / barCount
-        val barWidth = (slotWidth * 0.55f).coerceAtMost(40.dpToPx().toFloat())
+        val barWidth = (slotWidth * 0.55f).coerceAtMost(maxBarWidthPx)
 
         val maxValue = data.maxOf { it.second }.coerceAtLeast(1L)
 
@@ -105,18 +121,12 @@ class ScreenTimeGraphView @JvmOverloads constructor(
                 canvas.drawRoundRect(rect, barCornerRadius, barCornerRadius, barPaint)
             }
 
-            // Draw hours text above bar
-            val hours = millis / 3_600_000.0
-            val hoursText = if (hours >= 1.0) {
-                String.format("%.1fh", hours)
-            } else {
-                val mins = millis / 60_000
-                "${mins}m"
-            }
+            // Draw hours text above bar (use pre-computed label)
+            val hoursText = precomputedLabels.getOrElse(i) { "" }
             canvas.drawText(
                 hoursText,
                 centerX,
-                barTop - 4.dpToPx().toFloat(),
+                barTop - textAboveBarPadding,
                 textPaint
             )
 
@@ -124,7 +134,7 @@ class ScreenTimeGraphView @JvmOverloads constructor(
             canvas.drawText(
                 label,
                 centerX,
-                height.toFloat() - 2.dpToPx().toFloat(),
+                height.toFloat() - labelBelowBarPadding,
                 labelPaint
             )
         }

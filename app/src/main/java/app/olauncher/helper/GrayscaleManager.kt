@@ -7,7 +7,7 @@ import android.graphics.Paint
 import android.view.View
 
 /**
- * Applies or removes a grayscale filter on the root view using a hardware layer.
+ * Applies or removes a grayscale filter on the root view using a software layer.
  * The enabled state is persisted in SharedPreferences ("app.olauncher").
  */
 object GrayscaleManager {
@@ -23,10 +23,10 @@ object GrayscaleManager {
 
     /**
      * Applies a full grayscale (saturation 0) filter to the given root view
-     * using a hardware layer.
+     * using a software layer (required for dynamic content like scrolling/animations).
      */
     fun apply(rootView: View) {
-        rootView.setLayerType(View.LAYER_TYPE_HARDWARE, grayscalePaint)
+        rootView.setLayerType(View.LAYER_TYPE_SOFTWARE, grayscalePaint)
     }
 
     /**

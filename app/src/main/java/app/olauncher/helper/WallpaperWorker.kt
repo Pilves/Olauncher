@@ -10,14 +10,18 @@ import app.olauncher.data.Prefs
 
 class WallpaperWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
-    private val prefs by lazy { Prefs(applicationContext) }
-
     override suspend fun doWork(): Result {
+        if (runAttemptCount > 3) {
+            Log.e("WallpaperWorker", "Max retries exceeded, giving up until next period")
+            return Result.failure()
+        }
+
+        val prefs = Prefs(applicationContext)
         val success =
             if (isOlauncherDefault(applicationContext).not())
                 true
             else if (prefs.dailyWallpaper) {
-                val wallType = checkWallpaperType()
+                val wallType = checkWallpaperType(prefs)
                 val wallpaperUrl = getTodaysWallpaper(wallType, prefs.firstOpenTime)
                 if (prefs.dailyWallpaperUrl == wallpaperUrl)
                     true
@@ -36,7 +40,7 @@ class WallpaperWorker(appContext: Context, workerParams: WorkerParameters) : Cor
         }
     }
 
-    private fun checkWallpaperType(): String {
+    private fun checkWallpaperType(prefs: Prefs): String {
         return when (prefs.appTheme) {
             AppCompatDelegate.MODE_NIGHT_YES -> Constants.WALL_TYPE_DARK
             AppCompatDelegate.MODE_NIGHT_NO -> Constants.WALL_TYPE_LIGHT

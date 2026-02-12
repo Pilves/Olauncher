@@ -98,7 +98,7 @@ class AppDrawerFragment : Fragment() {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 val ctx = context ?: return true
                 if (query?.startsWith("!") == true)
-                    ctx.openUrl(Constants.URL_DUCK_SEARCH + query.replace(" ", "%20"))
+                    ctx.openUrl(Constants.URL_DUCK_SEARCH + java.net.URLEncoder.encode(query, "UTF-8"))
                 else if (adapter.itemCount == 0)
                     ctx.openSearch(query?.trim())
                 else
@@ -216,7 +216,6 @@ class AppDrawerFragment : Fragment() {
 
         binding.recyclerView.layoutManager = linearLayoutManager
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.setHasFixedSize(true)
         scrollListener = getRecyclerViewOnScrollListener()
         binding.recyclerView.addOnScrollListener(scrollListener!!)
         binding.recyclerView.itemAnimator = null
@@ -316,6 +315,7 @@ class AppDrawerFragment : Fragment() {
     }
 
     private fun checkMessageAndExit() {
+        if (!isAdded) return
         findNavController().popBackStack()
     }
 
@@ -384,6 +384,7 @@ class AppDrawerFragment : Fragment() {
             setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
             setOnClickListener {
                 dialog.dismiss()
+                if (!isAdded) return@setOnClickListener
                 viewModel.selectedApp(appModel, flag)
                 findNavController().popBackStack(R.id.mainFragment, false)
             }

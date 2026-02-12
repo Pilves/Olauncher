@@ -21,6 +21,10 @@ class Prefs(context: Context) {
             KEY_LAUNCHER_RECREATE_TIMESTAMP,
             "WEATHER_LAST_FETCHED"
         )
+
+        private val FLOAT_PREF_KEYS = setOf(
+            "TEXT_SIZE_SCALE"
+        )
     }
 
     private val PREFS_FILENAME = PREFS_NAME
@@ -450,35 +454,35 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(APP_PACKAGE_8, value) }
 
     var appActivityClassName1: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_1, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_1, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_1, value) }
 
     var appActivityClassName2: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_2, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_2, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_2, value) }
 
     var appActivityClassName3: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_3, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_3, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_3, value) }
 
     var appActivityClassName4: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_4, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_4, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_4, value) }
 
     var appActivityClassName5: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_5, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_5, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_5, value) }
 
     var appActivityClassName6: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_6, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_6, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_6, value) }
 
     var appActivityClassName7: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_7, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_7, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_7, value) }
 
     var appActivityClassName8: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_8, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_8, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_8, value) }
 
     var appUser1: String
@@ -526,7 +530,7 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_LEFT, value) }
 
     var appActivityClassNameSwipeLeft: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_LEFT, value) }
 
     var appPackageSwipeRight: String
@@ -534,7 +538,7 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(APP_PACKAGE_SWIPE_RIGHT, value) }
 
     var appActivityClassNameRight: String?
-        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, "").toString()
+        get() = prefs.getString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, null)
         set(value) = prefs.edit { putString(APP_ACTIVITY_CLASS_NAME_SWIPE_RIGHT, value) }
 
     var appUserSwipeLeft: String
@@ -554,7 +558,7 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(CLOCK_APP_USER, value) }
 
     var clockAppClassName: String?
-        get() = prefs.getString(CLOCK_APP_CLASS_NAME, "").toString()
+        get() = prefs.getString(CLOCK_APP_CLASS_NAME, null)
         set(value) = prefs.edit { putString(CLOCK_APP_CLASS_NAME, value) }
 
     var calendarAppPackage: String
@@ -566,7 +570,7 @@ class Prefs(context: Context) {
         set(value) = prefs.edit { putString(CALENDAR_APP_USER, value) }
 
     var calendarAppClassName: String?
-        get() = prefs.getString(CALENDAR_APP_CLASS_NAME, "").toString()
+        get() = prefs.getString(CALENDAR_APP_CLASS_NAME, null)
         set(value) = prefs.edit { putString(CALENDAR_APP_CLASS_NAME, value) }
 
     // Indexed accessors for home app slots (1-8) — same SharedPreferences keys as individual properties
@@ -631,6 +635,7 @@ class Prefs(context: Context) {
 
     fun exportToJson(): JSONObject {
         val json = JSONObject()
+        json.put("__olauncher_export_version", 1)
         for ((key, value) in prefs.all) {
             if (key in exportExcludeKeys) continue
             when (value) {
@@ -650,6 +655,15 @@ class Prefs(context: Context) {
     }
 
     fun importFromJson(json: JSONObject) {
+        if (!json.has("__olauncher_export_version")) {
+            throw IllegalArgumentException("Not a valid Olauncher settings file")
+        }
+
+        // Invalidate all in-memory caches before import
+        widgetHeightsCache = null
+        widgetProvidersCache = null
+        usageStatsCache = null
+
         val excludedValues = mutableMapOf<String, Any?>()
         for (key in exportExcludeKeys) {
             if (prefs.contains(key)) {
@@ -665,13 +679,16 @@ class Prefs(context: Context) {
                     is String -> putString(key, value)
                     is Boolean -> putBoolean(key, value)
                     is Float -> putFloat(key, value)
+                    is Set<*> -> @Suppress("UNCHECKED_CAST") putStringSet(key, value as Set<String>)
                 }
             }
             for (key in json.keys()) {
                 if (key in exportExcludeKeys) continue
+                if (key == "__olauncher_export_version") continue
                 val value = json.get(key)
                 when {
                     key in LONG_PREF_KEYS -> putLong(key, (value as Number).toLong())
+                    key in FLOAT_PREF_KEYS -> putFloat(key, (value as Number).toFloat())
                     value is Boolean -> putBoolean(key, value)
                     value is String -> putString(key, value)
                     value is Int -> {

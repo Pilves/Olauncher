@@ -1232,10 +1232,14 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun exportSettings() {
+        val ctx = requireContext()
+        val resolver = ctx.contentResolver
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val json = prefs.exportToJson()
-                val jsonString = json.toString(2)
+                val jsonString = withContext(Dispatchers.IO) {
+                    val json = prefs.exportToJson()
+                    json.toString(2)
+                }
 
                 withContext(Dispatchers.IO) {
                     val contentValues = ContentValues().apply {
@@ -1246,15 +1250,13 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                         }
                     }
 
-                    val resolver = requireContext().contentResolver
                     val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                    if (uri != null) {
-                        resolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
-                    }
+                        ?: throw java.io.IOException("Failed to create export file")
+                    resolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
                 }
-                context?.showToast(getString(R.string.settings_exported))
+                ctx.showToast(getString(R.string.settings_exported))
             } catch (e: Exception) {
-                context?.showToast(getString(R.string.settings_export_failed, e.message))
+                ctx.showToast(getString(R.string.settings_export_failed, e.message))
             }
         }
     }
@@ -1321,20 +1323,24 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun importSettings(uri: android.net.Uri) {
+        val ctx = requireContext()
+        val activity = requireActivity()
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val jsonString = withContext(Dispatchers.IO) {
-                    requireContext().contentResolver.openInputStream(uri)
+                    ctx.contentResolver.openInputStream(uri)
                         ?.bufferedReader()?.use { it.readText() }
                 }
                 if (jsonString != null) {
                     val json = org.json.JSONObject(jsonString)
-                    prefs.importFromJson(json)
-                    context?.showToast(getString(R.string.settings_imported))
-                    requireActivity().recreate()
+                    withContext(Dispatchers.IO) {
+                        prefs.importFromJson(json)
+                    }
+                    ctx.showToast(getString(R.string.settings_imported))
+                    activity.recreate()
                 }
             } catch (e: Exception) {
-                context?.showToast(getString(R.string.settings_import_failed, e.message))
+                ctx.showToast(getString(R.string.settings_import_failed, e.message))
             }
         }
     }

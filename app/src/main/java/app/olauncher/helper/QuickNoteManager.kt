@@ -9,10 +9,13 @@ object QuickNoteManager {
     private const val QUICK_NOTE_ENABLED = "QUICK_NOTE_ENABLED"
     private const val QUICK_NOTE_SLOT = "QUICK_NOTE_SLOT" // old key for migration
 
+    @Volatile private var migrated = false
+
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, 0)
 
     private fun migrateIfNeeded(context: Context) {
+        if (migrated) return
         val p = prefs(context)
         if (p.contains(QUICK_NOTE_SLOT)) {
             val oldSlot = p.getInt(QUICK_NOTE_SLOT, -1)
@@ -21,6 +24,7 @@ object QuickNoteManager {
                 .remove(QUICK_NOTE_SLOT)
                 .apply()
         }
+        migrated = true
     }
 
     fun isEnabled(context: Context): Boolean {

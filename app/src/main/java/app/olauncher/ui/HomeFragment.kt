@@ -89,6 +89,19 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private val mainActivityOrNull: MainActivity?
         get() = activity as? MainActivity
 
+    companion object {
+        private var cachedLocale: Locale? = null
+        private var dateFormatter: DateTimeFormatter? = null
+        fun getDateFormatter(): DateTimeFormatter {
+            val current = Locale.getDefault()
+            if (current != cachedLocale || dateFormatter == null) {
+                cachedLocale = current
+                dateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM", current)
+            }
+            return dateFormatter!!
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
@@ -287,14 +300,14 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         binding.clock.isVisible = Constants.DateTime.isTimeVisible(prefs.dateTimeVisibility)
         binding.date.isVisible = Constants.DateTime.isDateVisible(prefs.dateTimeVisibility)
 
-        val formatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())
         val weatherTemp = WeatherManager.getDisplayString(requireContext())
-        var dateText = LocalDate.now().format(formatter)
+        var dateText = LocalDate.now().format(getDateFormatter())
         if (weatherTemp.isNotEmpty()) dateText = "$weatherTemp  $dateText"
 
         if (!prefs.showStatusBar) {
-            val battery = (requireContext().getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
-                .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            val ctx = requireContext()
+            val batteryIntent = ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val battery = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             if (battery > 0)
                 dateText = getString(R.string.day_battery, dateText, battery)
         }
@@ -388,9 +401,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                     }
                     // If note is enabled, ensure it shows at the last visible slot
                     if (noteEnabled && maxFitting > 0) {
+                        val ctx = context ?: return@post
                         val noteView = homeAppViews[maxFitting - 1]
                         noteView.visibility = View.VISIBLE
-                        noteView.text = QuickNoteManager.getPreviewText(requireContext())
+                        noteView.text = QuickNoteManager.getPreviewText(ctx)
                         noteView.contentDescription = getString(R.string.quick_note)
                         noteView.setCompoundDrawablesRelative(null, null, null, null)
                     }
@@ -680,20 +694,18 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun lockPhone() {
-        requireActivity().runOnUiThread {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isAccessServiceEnabled(requireContext())) {
-                    binding.lock.performClick()
-                } else {
-                    deviceManager.lockNow()
-                }
-            } catch (e: SecurityException) {
-                prefs.lockModeOn = false
-                requireContext().showToast(getString(R.string.please_turn_on_double_tap_to_unlock), Toast.LENGTH_LONG)
-                findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
-            } catch (e: Exception) {
-                requireContext().showToast(getString(R.string.launcher_failed_to_lock_device), Toast.LENGTH_LONG)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isAccessServiceEnabled(requireContext())) {
+                binding.lock.performClick()
+            } else {
+                deviceManager.lockNow()
             }
+        } catch (e: SecurityException) {
+            prefs.lockModeOn = false
+            requireContext().showToast(getString(R.string.please_turn_on_double_tap_to_unlock), Toast.LENGTH_LONG)
+            findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
+        } catch (e: Exception) {
+            requireContext().showToast(getString(R.string.launcher_failed_to_lock_device), Toast.LENGTH_LONG)
         }
     }
 
@@ -890,7 +902,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val resolveInfos = withContext(Dispatchers.Default) {
+            val resolveInfos = withContext(Dispatchers.IO) {
                 pm.queryIntentActivities(intent, 0)
                     .sortedBy { it.loadLabel(pm).toString().lowercase() }
                     .take(50)
@@ -1231,7 +1243,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         // Gather widget info on background thread
         data class WidgetRestoreInfo(val wid: Int, val info: AppWidgetProviderInfo?, val providerStr: String?)
-        val restoreInfoList = withContext(Dispatchers.Default) {
+        val restoreInfoList = withContext(Dispatchers.IO) {
             ids.map { wid ->
                 val info = try {
                     mainActivity.appWidgetManager.getAppWidgetInfo(wid)
@@ -1295,7 +1307,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         // Need user permission — launch bind dialog
         mainActivity.pendingWidgetId = newId
-        mainActivity.onWidgetBindResult = { success ->
+        mainActivity.onWidgetBindResult = result@{ success ->
+            if (!isAdded || _binding == null) return@result
             if (success) {
                 completeWidgetRestore(oldId, newId, providerStr)
             } else {
@@ -1607,7 +1620,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
         viewLifecycleOwner.lifecycleScope.launch {
             data class WidgetEntry(val appName: String, val widgetLabel: String, val provider: AppWidgetProviderInfo)
-            val allEntries = withContext(Dispatchers.Default) {
+            val allEntries = withContext(Dispatchers.IO) {
                 val installedProviders = mainActivity.appWidgetManager.installedProviders
                 installedProviders.map { provider ->
                     val appName = try {
@@ -1748,7 +1761,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 onWidgetBound(widgetId, providerInfo, replaceIndex)
             } else {
                 val capturedReplaceIndex = replaceIndex
-                mainActivity.onWidgetBindResult = { success ->
+                mainActivity.onWidgetBindResult = result@{ success ->
+                    if (!isAdded || _binding == null) return@result
                     if (success) {
                         mainActivity.pendingWidgetInfo?.let { widgetInfo ->
                             onWidgetBound(mainActivity.pendingWidgetId, widgetInfo, capturedReplaceIndex)
@@ -1776,7 +1790,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
             if (providerInfo.configure != null) {
                 val capturedReplaceIndex = replaceIndex
-                mainActivity.onWidgetConfigureResult = { success ->
+                mainActivity.onWidgetConfigureResult = result@{ success ->
+                    if (!isAdded || _binding == null) return@result
                     if (success) {
                         finishWidgetSetup(widgetId, providerInfo, capturedReplaceIndex)
                     } else {
@@ -1837,6 +1852,8 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         screenTouchListener = null
         viewTouchListeners.forEach { it.cleanup() }
         viewTouchListeners.clear()
+        binding.widgetContainerAbove?.removeAllViews()
+        binding.widgetContainerBelow?.removeAllViews()
         super.onDestroyView()
         _binding = null
     }
