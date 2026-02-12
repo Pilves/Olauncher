@@ -100,11 +100,6 @@ class ScreenTimeGraphDialog(context: Context) : BottomSheetDialog(context) {
         }
     }
 
-    override fun onDestroy() {
-        loadJob?.cancel()
-        super.onDestroy()
-    }
-
     override fun onStop() {
         loadJob?.cancel()
         super.onStop()
