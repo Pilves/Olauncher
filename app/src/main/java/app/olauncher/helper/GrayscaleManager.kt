@@ -1,63 +1,48 @@
 package app.olauncher.helper
 
 import android.content.Context
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
-import android.view.View
+import android.provider.Settings
 
 /**
- * Applies or removes a grayscale filter on the root view using a software layer.
- * The enabled state is persisted in SharedPreferences ("app.olauncher").
+ * Manages device-wide grayscale via Android's built-in display daltonizer.
+ *
+ * If WRITE_SECURE_SETTINGS is granted, toggles it directly.
+ * Otherwise, the caller should open accessibility settings for the user.
  */
 object GrayscaleManager {
 
-    private const val PREFS_NAME = "app.olauncher"
-    private const val KEY_GRAYSCALE_ENABLED = "GRAYSCALE_ENABLED"
+    private const val DALTONIZER_ENABLED = "accessibility_display_daltonizer_enabled"
+    private const val DALTONIZER_MODE = "accessibility_display_daltonizer"
+    private const val DALTONIZER_GRAYSCALE = 0
 
-    private val grayscalePaint by lazy {
-        Paint().apply {
-            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+    /**
+     * Whether device-wide grayscale is currently active (reads system state, no permission needed).
+     */
+    fun isEnabled(context: Context): Boolean {
+        return try {
+            Settings.Secure.getInt(context.contentResolver, DALTONIZER_ENABLED, 0) == 1 &&
+                Settings.Secure.getInt(context.contentResolver, DALTONIZER_MODE, -1) == DALTONIZER_GRAYSCALE
+        } catch (e: Exception) {
+            false
         }
     }
 
     /**
-     * Applies a full grayscale (saturation 0) filter to the given root view
-     * using a software layer (required for dynamic content like scrolling/animations).
+     * Try to toggle device-wide grayscale via the display daltonizer.
+     * Returns true if successful, false if WRITE_SECURE_SETTINGS is not granted.
      */
-    fun apply(rootView: View) {
-        rootView.setLayerType(View.LAYER_TYPE_SOFTWARE, grayscalePaint)
-    }
-
-    /**
-     * Removes any layer-based filter from the given root view.
-     */
-    fun remove(rootView: View) {
-        rootView.setLayerType(View.LAYER_TYPE_NONE, null)
-    }
-
-    /**
-     * Returns whether grayscale mode is enabled in preferences.
-     */
-    fun isEnabled(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, 0)
-            .getBoolean(KEY_GRAYSCALE_ENABLED, false)
-    }
-
-    /**
-     * Sets the grayscale enabled preference.
-     */
-    fun setEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, 0)
-            .edit()
-            .putBoolean(KEY_GRAYSCALE_ENABLED, enabled)
-            .apply()
-    }
-
-    /**
-     * Toggles the grayscale enabled preference.
-     */
-    fun toggle(context: Context) {
-        setEnabled(context, !isEnabled(context))
+    fun toggle(context: Context): Boolean {
+        val enable = !isEnabled(context)
+        return try {
+            if (enable) {
+                Settings.Secure.putInt(context.contentResolver, DALTONIZER_ENABLED, 1)
+                Settings.Secure.putInt(context.contentResolver, DALTONIZER_MODE, DALTONIZER_GRAYSCALE)
+            } else {
+                Settings.Secure.putInt(context.contentResolver, DALTONIZER_ENABLED, 0)
+            }
+            true
+        } catch (e: SecurityException) {
+            false
+        }
     }
 }

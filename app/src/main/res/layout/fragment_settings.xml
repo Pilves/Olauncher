@@ -28,6 +28,7 @@
             android:orientation="vertical"
             android:paddingVertical="64dp">
 
+            <!-- Card 1: Olauncher -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -107,6 +108,7 @@
 
             </LinearLayout>
 
+            <!-- Card 2: Home Screen -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -128,6 +130,7 @@
                     android:text="@string/home_screen"
                     android:textColor="?attr/primaryColor" />
 
+                <!-- Apps on home screen -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -157,7 +160,6 @@
                         android:paddingEnd="8dp"
                         tools:text="@string/_8" />
 
-                    <!-- Home apps numbers layout-->
                     <LinearLayout
                         android:id="@+id/appsNumSelectLayout"
                         android:layout_width="match_parent"
@@ -264,6 +266,7 @@
 
                 </FrameLayout>
 
+                <!-- Show date time -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -289,7 +292,6 @@
                         android:padding="8dp"
                         android:text="@string/on" />
 
-                    <!-- date time layout-->
                     <LinearLayout
                         android:id="@+id/dateTimeSelectLayout"
                         android:layout_width="match_parent"
@@ -343,6 +345,7 @@
 
                 </FrameLayout>
 
+                <!-- App alignment -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -370,7 +373,6 @@
                         android:padding="8dp"
                         android:text="@string/left" />
 
-                    <!-- alignment layout-->
                     <HorizontalScrollView
                         android:id="@+id/alignmentSelectLayout"
                         android:layout_width="match_parent"
@@ -448,13 +450,11 @@
 
                 </FrameLayout>
 
+                <!-- Show icons -->
                 <FrameLayout
-                    android:id="@+id/screenTimeLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:clipChildren="false"
-                    android:clipToPadding="false">
+                    android:layout_marginTop="12dp">
 
                     <TextView
                         style="@style/TextSmall"
@@ -462,11 +462,11 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:paddingVertical="8dp"
-                        android:text="@string/screen_time"
+                        android:text="@string/show_icons"
                         android:textColor="?attr/primaryColor" />
 
                     <TextView
-                        android:id="@+id/screenTimeOnOff"
+                        android:id="@+id/showIconsToggle"
                         style="@style/TextSmallBold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -477,6 +477,7 @@
 
                 </FrameLayout>
 
+                <!-- Sort by usage -->
                 <FrameLayout
                     android:id="@+id/sortByUsageLayout"
                     android:layout_width="match_parent"
@@ -506,58 +507,7 @@
 
                 </FrameLayout>
 
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:paddingVertical="8dp"
-                        android:text="@string/show_icons"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/showIconsToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|bottom"
-                        android:layout_marginEnd="4dp"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:paddingVertical="8dp"
-                        android:text="@string/habit_tracking"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/habitTrackingToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|bottom"
-                        android:layout_marginEnd="4dp"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-
-                </FrameLayout>
-
+                <!-- Widget placement -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -587,6 +537,7 @@
 
             </LinearLayout>
 
+            <!-- Card 3: Appearance -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -608,86 +559,11 @@
                     android:text="@string/appearance"
                     android:textColor="?attr/primaryColor" />
 
+                <!-- Theme mode (opens bottom sheet) -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:paddingVertical="8dp"
-                        android:text="@string/auto_show_keyboard"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/autoShowKeyboard"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|bottom"
-                        android:layout_marginEnd="4dp"
-                        android:padding="8dp"
-                        android:text="@string/on" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        android:id="@+id/dailyWallpaperUrl"
-                        style="@style/TextSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:paddingVertical="8dp"
-                        android:text="@string/daily_wallpaper_update" />
-
-                    <TextView
-                        android:id="@+id/dailyWallpaper"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|bottom"
-                        android:layout_marginEnd="4dp"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:paddingVertical="8dp"
-                        android:text="@string/notification_bar"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/statusBar"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|bottom"
-                        android:layout_marginEnd="4dp"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:animateLayoutChanges="true">
 
                     <TextView
                         style="@style/TextSmall"
@@ -708,65 +584,13 @@
                         android:padding="8dp"
                         android:text="@string/dark" />
 
-                    <!-- theme color select layout-->
-                    <LinearLayout
-                        android:id="@+id/appThemeSelectLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/rounded_primary_gradient"
-                        android:elevation="8dp"
-                        android:orientation="horizontal"
-                        android:outlineAmbientShadowColor="@color/colorPrimaryDark"
-                        android:outlineSpotShadowColor="@color/colorPrimaryDark"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="2dp"
-                        android:visibility="gone"
-                        tools:ignore="UnusedAttribute">
-
-                        <Space
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-
-                        <TextView
-                            android:id="@+id/themeSystem"
-                            style="@style/TextSmallBold"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="24dp"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="@string/system_default"
-                            android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/themeLight"
-                            style="@style/TextSmallBold"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="24dp"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="@string/light" />
-
-                        <TextView
-                            android:id="@+id/themeDark"
-                            style="@style/TextSmallBold"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="@string/dark" />
-
-                    </LinearLayout>
-
                 </FrameLayout>
 
+                <!-- Text size -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="4dp"
                     android:animateLayoutChanges="true"
                     android:clipChildren="false"
                     android:clipToPadding="false">
@@ -792,7 +616,6 @@
                         android:paddingEnd="8dp"
                         tools:text="@string/_8" />
 
-                    <!-- Text sizes layout-->
                     <LinearLayout
                         android:id="@+id/textSizesLayout"
                         android:layout_width="match_parent"
@@ -880,8 +703,93 @@
 
                 </FrameLayout>
 
+                <!-- Daily wallpaper -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:id="@+id/dailyWallpaperUrl"
+                        style="@style/TextSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:paddingVertical="8dp"
+                        android:text="@string/daily_wallpaper_update" />
+
+                    <TextView
+                        android:id="@+id/dailyWallpaper"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginEnd="4dp"
+                        android:padding="8dp"
+                        android:text="@string/off" />
+                </FrameLayout>
+
+                <!-- Notification bar -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:paddingVertical="8dp"
+                        android:text="@string/notification_bar"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/statusBar"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginEnd="4dp"
+                        android:padding="8dp"
+                        android:text="@string/off" />
+                </FrameLayout>
+
+                <!-- Weather (moved from Wellbeing) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="24dp"
+                        android:layout_weight="1"
+                        android:lines="1"
+                        android:paddingVertical="8dp"
+                        android:text="@string/weather"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/weatherToggle"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="4dp"
+                        android:lines="1"
+                        android:padding="8dp"
+                        android:text="@string/off" />
+                </LinearLayout>
+
             </LinearLayout>
 
+            <!-- Card 4: Gestures -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -901,6 +809,7 @@
                     android:text="@string/gestures"
                     android:textColor="?attr/primaryColor" />
 
+                <!-- Swipe left action -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -930,6 +839,7 @@
                         android:padding="8dp" />
                 </LinearLayout>
 
+                <!-- Swipe right action -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -959,6 +869,7 @@
                         android:padding="8dp" />
                 </LinearLayout>
 
+                <!-- Swipe down for -->
                 <FrameLayout
                     android:id="@+id/flSwipeDown"
                     android:layout_width="match_parent"
@@ -989,7 +900,6 @@
                         android:padding="8dp"
                         tools:text="@string/search" />
 
-                    <!-- Swipe down select layout-->
                     <LinearLayout
                         android:id="@+id/swipeDownSelectLayout"
                         android:layout_width="match_parent"
@@ -1032,32 +942,98 @@
 
                 </FrameLayout>
 
-                <FrameLayout
+                <!-- Double tap action -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_marginTop="12dp"
-                    android:visibility="visible">
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="24dp"
+                        android:layout_weight="1"
+                        android:lines="1"
+                        android:paddingVertical="8dp"
+                        android:text="@string/double_tap_action"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/doubleTapAction"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="4dp"
+                        android:lines="1"
+                        android:padding="8dp"
+                        android:text="@string/lock_screen" />
+                </LinearLayout>
+
+                <!-- Auto show keyboard (moved from Appearance) -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
 
                     <TextView
                         style="@style/TextSmall"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
                         android:paddingVertical="8dp"
-                        android:text="@string/double_tap_to_lock_screen"
+                        android:text="@string/auto_show_keyboard"
                         android:textColor="?attr/primaryColor" />
 
                     <TextView
-                        android:id="@+id/toggleLock"
+                        android:id="@+id/autoShowKeyboard"
                         style="@style/TextSmallBold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:padding="10dp"
-                        android:text="@string/off" />
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginEnd="4dp"
+                        android:padding="8dp"
+                        android:text="@string/on" />
                 </FrameLayout>
+
+                <!-- Gesture letters (moved from Wellbeing) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="24dp"
+                        android:layout_weight="1"
+                        android:lines="1"
+                        android:paddingVertical="8dp"
+                        android:text="@string/gesture_letters"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/gestureLettersToggle"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="4dp"
+                        android:lines="1"
+                        android:padding="8dp"
+                        android:text="@string/off" />
+                </LinearLayout>
+
             </LinearLayout>
 
+            <!-- Card 5: Digital Wellbeing -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1076,6 +1052,68 @@
                     android:text="@string/wellbeing"
                     android:textColor="?attr/primaryColor" />
 
+                <!-- Screen time (moved from Home Screen) -->
+                <FrameLayout
+                    android:id="@+id/screenTimeLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:paddingVertical="8dp"
+                        android:text="@string/screen_time"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/screenTimeOnOff"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginEnd="4dp"
+                        android:padding="8dp"
+                        android:text="@string/off" />
+
+                </FrameLayout>
+
+                <!-- App limits -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/TextSmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="24dp"
+                        android:layout_weight="1"
+                        android:lines="1"
+                        android:paddingVertical="8dp"
+                        android:text="@string/app_limits"
+                        android:textColor="?attr/primaryColor" />
+
+                    <TextView
+                        android:id="@+id/screenTimeLimitsToggle"
+                        style="@style/TextSmallBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="4dp"
+                        android:lines="1"
+                        android:padding="8dp"
+                        android:text="@string/configure" />
+                </LinearLayout>
+
+                <!-- Focus mode -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -1106,40 +1144,12 @@
                         android:text="@string/off" />
                 </LinearLayout>
 
+                <!-- Grayscale -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="24dp"
-                        android:layout_weight="1"
-                        android:lines="1"
-                        android:paddingVertical="8dp"
-                        android:text="@string/screen_time_limits"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/screenTimeLimitsToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="4dp"
-                        android:lines="1"
-                        android:padding="8dp"
-                        android:text="@string/configure" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="4dp"
                     android:orientation="horizontal">
 
                     <TextView
@@ -1164,127 +1174,6 @@
                         android:lines="1"
                         android:padding="8dp"
                         android:text="@string/off" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="24dp"
-                        android:layout_weight="1"
-                        android:lines="1"
-                        android:paddingVertical="8dp"
-                        android:text="@string/double_tap_action"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/doubleTapAction"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="4dp"
-                        android:lines="1"
-                        android:padding="8dp"
-                        android:text="@string/lock_screen" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="24dp"
-                        android:layout_weight="1"
-                        android:lines="1"
-                        android:paddingVertical="8dp"
-                        android:text="@string/gesture_letters"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/gestureLettersToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="4dp"
-                        android:lines="1"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="24dp"
-                        android:layout_weight="1"
-                        android:lines="1"
-                        android:paddingVertical="8dp"
-                        android:text="@string/weather"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/weatherToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="4dp"
-                        android:lines="1"
-                        android:padding="8dp"
-                        android:text="@string/off" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/TextSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="24dp"
-                        android:layout_weight="1"
-                        android:lines="1"
-                        android:paddingVertical="8dp"
-                        android:text="@string/theme_schedule"
-                        android:textColor="?attr/primaryColor" />
-
-                    <TextView
-                        android:id="@+id/themeScheduleToggle"
-                        style="@style/TextSmallBold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="4dp"
-                        android:lines="1"
-                        android:padding="8dp"
-                        android:text="@string/manual" />
                 </LinearLayout>
 
             </LinearLayout>

@@ -64,7 +64,7 @@ class Prefs(context: Context) {
     private val SWIPE_RIGHT_ACTION = "SWIPE_RIGHT_ACTION"
     private val SHOW_ICONS = "SHOW_ICONS"
     private val ICON_PACK_PACKAGE = "ICON_PACK_PACKAGE"
-    private val HABIT_TRACKING_ENABLED = "HABIT_TRACKING_ENABLED"
+    private val ONBOARDING_COMPLETE = "ONBOARDING_COMPLETE"
 
     private val APP_NAME_1 = "APP_NAME_1"
     private val APP_NAME_2 = "APP_NAME_2"
@@ -135,6 +135,10 @@ class Prefs(context: Context) {
     var lockModeOn: Boolean
         get() = prefs.getBoolean(LOCK_MODE, false)
         set(value) = prefs.edit { putBoolean(LOCK_MODE, value) }
+
+    var onboardingComplete: Boolean
+        get() = prefs.getBoolean(ONBOARDING_COMPLETE, false)
+        set(value) = prefs.edit { putBoolean(ONBOARDING_COMPLETE, value) }
 
     var autoShowKeyboard: Boolean
         get() = prefs.getBoolean(AUTO_SHOW_KEYBOARD, true)
@@ -223,10 +227,6 @@ class Prefs(context: Context) {
     var iconPackPackage: String
         get() = prefs.getString(ICON_PACK_PACKAGE, "") ?: ""
         set(value) = prefs.edit { putString(ICON_PACK_PACKAGE, value) }
-
-    var habitTrackingEnabled: Boolean
-        get() = prefs.getBoolean(HABIT_TRACKING_ENABLED, false)
-        set(value) = prefs.edit { putBoolean(HABIT_TRACKING_ENABLED, value) }
 
     var appDrawerSortByUsage: Boolean
         get() = prefs.getBoolean(APP_DRAWER_SORT_BY_USAGE, false)
@@ -630,7 +630,8 @@ class Prefs(context: Context) {
         CACHED_USAGE_STATS,
         "WEATHER_CACHED_TEMP", "WEATHER_LAST_FETCHED",
         "FOCUS_MODE_ENABLED", "FOCUS_MODE_END_TIME",
-        "HABIT_STREAK_DATA"
+        "HABIT_STREAK_DATA",
+        ONBOARDING_COMPLETE
     )
 
     fun exportToJson(): JSONObject {

@@ -243,23 +243,18 @@
     <string name="no_results" translatable="false">No results found</string>
     <string name="current_city" translatable="false">Current: %s</string>
 
-    <!-- Habit Streaks -->
-    <string name="habit_tracking" translatable="false">Habit tracking</string>
-    <string name="mark_as_habit" translatable="false">Mark as habit</string>
-    <string name="unmark_habit" translatable="false">Unmark habit</string>
-    <string name="streak_days" translatable="false">%s streak</string>
-
-    <!-- Bad Habits -->
-    <string name="bad_habit" translatable="false">Bad habit</string>
-    <string name="unmark_bad_habit" translatable="false">Unmark bad</string>
-    <string name="mark_as_bad_habit" translatable="false">Mark as bad habit</string>
-    <string name="bad_habit_warning" translatable="false">You\u2019ve used %1$s for %2$s today (limit: %3$s)</string>
+    <!-- App Limits -->
+    <string name="app_limits" translatable="false">App limits</string>
+    <string name="set_time_limit" translatable="false">Set time limit</string>
+    <string name="remove_time_limit" translatable="false">Remove time limit</string>
+    <string name="app_limit_warning" translatable="false">You\u2019ve used %1$s for %2$s today (limit: %3$s)</string>
     <string name="open_anyway" translatable="false">Open anyway</string>
     <string name="go_back" translatable="false">Go back</string>
     <string name="select_time_limit" translatable="false">Select daily time limit</string>
 
     <!-- Grayscale -->
     <string name="grayscale" translatable="false">Grayscale</string>
+    <string name="grayscale_open_settings" translatable="false">Enable color correction in accessibility settings</string>
 
     <!-- Gesture Letters -->
     <string name="gesture_letters" translatable="false">Gesture letters</string>
@@ -269,9 +264,42 @@
     <string name="no_app_for_letter" translatable="false">No app assigned to letter %s</string>
 
     <!-- Wellbeing section -->
-    <string name="wellbeing" translatable="false">Wellbeing</string>
+    <string name="wellbeing" translatable="false">Digital Wellbeing</string>
 
     <!-- General new -->
     <string name="configure" translatable="false">Configure</string>
     <string name="app_options" translatable="false">App options</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_gestures_title">Gestures</string>
+    <string name="onboarding_gestures_subtitle">Navigate with simple gestures</string>
+    <string name="onboarding_gesture_swipe_up">Swipe up to open the app drawer</string>
+    <string name="onboarding_gesture_swipe_down">Swipe down to open notifications</string>
+    <string name="onboarding_gesture_swipe_left">Swipe left to open an app (customizable)</string>
+    <string name="onboarding_gesture_swipe_right">Swipe right to open an app (customizable)</string>
+    <string name="onboarding_gesture_double_tap">Double tap to lock the screen</string>
+
+    <string name="onboarding_home_title">Home Screen</string>
+    <string name="onboarding_home_subtitle">Your home screen, your rules</string>
+    <string name="onboarding_home_slots">Up to 8 app slots on the home screen</string>
+    <string name="onboarding_home_clock">Tap the clock or date to open apps</string>
+    <string name="onboarding_home_long_press_app">Long press an app for options</string>
+    <string name="onboarding_home_long_press_empty">Long press empty space for settings</string>
+
+    <string name="onboarding_features_title">Features</string>
+    <string name="onboarding_features_subtitle">Powerful tools, minimal interface</string>
+    <string name="onboarding_feature_widgets">Add widgets via long press menu</string>
+    <string name="onboarding_feature_quick_note">Quick note pinned to home screen</string>
+    <string name="onboarding_feature_focus_mode">Focus mode to block distracting apps</string>
+    <string name="onboarding_feature_gesture_letters">Draw letters to launch apps instantly</string>
+
+    <string name="onboarding_ready_title">You\'re All Set</string>
+    <string name="onboarding_ready_subtitle">Explore more in settings</string>
+    <string name="onboarding_ready_themes">Light, dark, and auto themes</string>
+    <string name="onboarding_ready_wallpaper">Daily wallpaper updates</string>
+    <string name="onboarding_ready_hidden_apps">Hide apps from the drawer</string>
+    <string name="onboarding_ready_habit">App limits and screen time</string>
+
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_get_started">Get Started</string>
 </resources>

@@ -79,8 +79,8 @@
             android:gravity="center"
             android:maxLines="1"
             android:paddingHorizontal="8dp"
-            android:text="@string/mark_as_habit"
             android:textSize="12sp"
+            android:visibility="gone"
             app:drawableTopCompat="@drawable/ic_check" />
 
         <TextView
@@ -94,7 +94,7 @@
             android:gravity="center"
             android:maxLines="1"
             android:paddingHorizontal="8dp"
-            android:text="@string/bad_habit"
+            android:text="@string/set_time_limit"
             android:textSize="12sp"
             app:drawableTopCompat="@drawable/ic_close" />
 

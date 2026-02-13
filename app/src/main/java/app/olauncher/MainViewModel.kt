@@ -20,8 +20,6 @@ import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.helper.FocusModeManager
 import app.olauncher.helper.GestureLetterManager
-import app.olauncher.helper.HabitStreakManager
-import app.olauncher.helper.ScreenTimeLimitManager
 import app.olauncher.helper.SingleLiveEvent
 import app.olauncher.helper.ThemeScheduleManager
 import app.olauncher.helper.WallpaperWorker
@@ -75,10 +73,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     return
                 }
                 launchApp(appModel.appPackage, appModel.activityClassName, appModel.user)
-                viewModelScope.launch(Dispatchers.IO) {
-                    try { ScreenTimeLimitManager.checkAndWarn(appContext, appModel.appPackage) } catch (e: Exception) { e.printStackTrace() }
-                    try { HabitStreakManager.recordLaunch(appContext, appModel.appPackage) } catch (e: Exception) { e.printStackTrace() }
-                }
             }
 
             in Constants.FLAG_SET_HOME_APP_1..Constants.FLAG_SET_HOME_APP_8 -> {

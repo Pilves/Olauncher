@@ -20,8 +20,8 @@ import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentAppDrawerBinding
 import app.olauncher.data.AppModel
-import app.olauncher.helper.BadHabitManager
-import app.olauncher.helper.ScreenTimeLimitManager
+import app.olauncher.helper.AppLimitManager
+import app.olauncher.helper.UsageStatsHelper
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.getColorFromAttr
@@ -325,13 +325,12 @@ class AppDrawerFragment : Fragment() {
      */
     private fun checkBadHabitAndLaunch(appModel: AppModel): Boolean {
         val ctx = context ?: return false
-        if (!prefs.habitTrackingEnabled) return false
-        if (!BadHabitManager.isBadHabitApp(ctx, appModel.appPackage)) return false
-        val limitMinutes = BadHabitManager.getLimit(ctx, appModel.appPackage) ?: return false
+        if (!AppLimitManager.hasLimit(ctx, appModel.appPackage)) return false
+        val limitMinutes = AppLimitManager.getLimit(ctx, appModel.appPackage) ?: return false
 
         viewLifecycleOwner.lifecycleScope.launch {
             val usageMs = withContext(Dispatchers.IO) {
-                ScreenTimeLimitManager.getUsageForApp(ctx, appModel.appPackage)
+                UsageStatsHelper.getUsageForApp(ctx, appModel.appPackage)
             }
             if (!isAdded) return@launch
             val usageMinutes = usageMs / 60_000
@@ -370,7 +369,7 @@ class AppDrawerFragment : Fragment() {
         container.addView(handle)
 
         val message = android.widget.TextView(ctx).apply {
-            text = ctx.getString(R.string.bad_habit_warning, appName, usageText, limitText)
+            text = ctx.getString(R.string.app_limit_warning, appName, usageText, limitText)
             textSize = 16f
             setTextColor(ctx.getColorFromAttr(R.attr.primaryColor))
             setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 16.dpToPx())

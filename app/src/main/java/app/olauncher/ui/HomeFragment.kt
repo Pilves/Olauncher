@@ -56,11 +56,10 @@ import app.olauncher.helper.FolderManager
 import app.olauncher.helper.GestureLetterManager
 import app.olauncher.helper.IconPackManager
 import app.olauncher.helper.isAccessServiceEnabled
-import app.olauncher.helper.BadHabitManager
+import app.olauncher.helper.AppLimitManager
 import app.olauncher.helper.GrayscaleManager
-import app.olauncher.helper.HabitStreakManager
 import app.olauncher.helper.QuickNoteManager
-import app.olauncher.helper.ScreenTimeLimitManager
+import app.olauncher.helper.UsageStatsHelper
 import app.olauncher.helper.SwipeUpAppManager
 import app.olauncher.helper.WeatherManager
 import app.olauncher.ui.FocusModeDialog
@@ -85,6 +84,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private val viewTouchListeners = mutableListOf<ViewSwipeTouchListener>()
     private lateinit var folderManager: FolderManager
     private var expandedFolderSlot: Int = -1
+    private var effectiveNoteSlot: Int = -1
+
+    private val widgetGestureDetectors = mutableListOf<android.view.GestureDetector>()
 
     private val mainActivityOrNull: MainActivity?
         get() = activity as? MainActivity
@@ -125,19 +127,26 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         viewLifecycleOwner.lifecycleScope.launch {
             restoreWidget()
         }
+
+        if (!prefs.onboardingComplete) {
+            prefs.onboardingComplete = true
+            findNavController().navigate(R.id.action_mainFragment_to_onboardingFragment)
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        // Cancel any pending long-press timers from before the app was backgrounded
+        if (widgetGestureDetectors.isNotEmpty()) {
+            val cancel = MotionEvent.obtain(0, 0, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+            widgetGestureDetectors.forEach { it.onTouchEvent(cancel) }
+            cancel.recycle()
+        }
         populateHomeScreen(false)
         viewModel.isOlauncherDefault()
         if (prefs.showStatusBar) showStatusBar()
         else hideStatusBar()
         FocusModeManager.checkAndExpire(requireContext())
-        if (GrayscaleManager.isEnabled(requireContext()))
-            GrayscaleManager.apply(binding.root)
-        else
-            GrayscaleManager.remove(binding.root)
         viewModel.getWeather()
         updateGestureLetterOverlay()
     }
@@ -339,6 +348,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         val homeAppsNum = prefs.homeAppsNum.coerceAtMost(homeAppViews.size)
 
         val noteEnabled = QuickNoteManager.isEnabled(requireContext())
+        effectiveNoteSlot = if (noteEnabled) homeAppsNum else -1
 
         for (i in 0 until homeAppsNum) {
             val slot = i + 1
@@ -420,6 +430,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                             noteView.text = QuickNoteManager.getPreviewText(ctx)
                             noteView.contentDescription = getString(R.string.quick_note)
                             noteView.setCompoundDrawablesRelative(null, null, null, null)
+                            effectiveNoteSlot = maxFitting
                         }
                     }
                 }
@@ -467,7 +478,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             toggleFolderExpansion(location)
             return
         }
-        if (QuickNoteManager.isEnabled(requireContext()) && location == prefs.homeAppsNum) {
+        if (effectiveNoteSlot > 0 && location == effectiveNoteSlot) {
             showQuickNoteDialog()
             return
         }
@@ -496,17 +507,17 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
 
     private fun checkBadHabitAndLaunch(name: String, pkg: String, activity: String?, user: String) {
         val ctx = context ?: return
-        if (!prefs.habitTrackingEnabled || !BadHabitManager.isBadHabitApp(ctx, pkg)) {
+        if (!AppLimitManager.hasLimit(ctx, pkg)) {
             launchApp(name, pkg, activity, user)
             return
         }
-        val limitMinutes = BadHabitManager.getLimit(ctx, pkg) ?: run {
+        val limitMinutes = AppLimitManager.getLimit(ctx, pkg) ?: run {
             launchApp(name, pkg, activity, user)
             return
         }
         viewLifecycleOwner.lifecycleScope.launch {
             val usageMs = withContext(Dispatchers.IO) {
-                ScreenTimeLimitManager.getUsageForApp(ctx, pkg)
+                UsageStatsHelper.getUsageForApp(ctx, pkg)
             }
             if (!isAdded) return@launch
             val usageMinutes = usageMs / 60_000
@@ -546,7 +557,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
         container.addView(handle)
 
         val message = TextView(ctx).apply {
-            text = ctx.getString(R.string.bad_habit_warning, appName, usageText, limitText)
+            text = ctx.getString(R.string.app_limit_warning, appName, usageText, limitText)
             textSize = 16f
             setTextColor(ctx.getColorFromAttr(R.attr.primaryColor))
             setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 16.dpToPx())
@@ -612,8 +623,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 setTextColor(ctx.getColorFromAttr(R.attr.primaryColor))
                 setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
                 setOnClickListener {
-                    BadHabitManager.addBadHabit(ctx, pkg, minutes)
-                    HabitStreakManager.removeHabitApp(ctx, pkg)
+                    AppLimitManager.setLimit(ctx, pkg, minutes)
                     dialog.dismiss()
                     populateHomeScreen(false)
                 }
@@ -826,7 +836,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     private fun showHomeSlotMenu(slot: Int) {
         val hasApp = prefs.getHomeAppName(slot).isNotEmpty()
         val isFolder = folderManager.isFolderSlot(slot)
-        val isNote = QuickNoteManager.isEnabled(requireContext()) && slot == prefs.homeAppsNum
+        val isNote = effectiveNoteSlot > 0 && slot == effectiveNoteSlot
 
         val dialog = BottomSheetDialog(requireContext())
         val container = android.widget.LinearLayout(requireContext()).apply {
@@ -865,26 +875,14 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             showCreateFolderDialog(slot)
         }
 
-        // Habit toggle (only for regular apps, not folders or notes, and only when enabled)
-        if (hasApp && !isFolder && !isNote && prefs.habitTrackingEnabled) {
+        // App limit toggle (only for regular apps, not folders or notes)
+        if (hasApp && !isFolder && !isNote) {
             val pkg = prefs.getHomeAppPackage(slot)
             if (pkg.isNotEmpty()) {
-                val isHabit = HabitStreakManager.isHabitApp(requireContext(), pkg)
-                addOption(if (isHabit) getString(R.string.unmark_habit) else getString(R.string.mark_as_habit)) {
-                    if (isHabit) {
-                        HabitStreakManager.removeHabitApp(requireContext(), pkg)
-                    } else {
-                        HabitStreakManager.addHabitApp(requireContext(), pkg)
-                        BadHabitManager.removeBadHabit(requireContext(), pkg)
-                    }
-                    populateHomeScreen(false)
-                }
-
-                // Bad habit toggle
-                val isBadHabit = BadHabitManager.isBadHabitApp(requireContext(), pkg)
-                addOption(if (isBadHabit) getString(R.string.unmark_bad_habit) else getString(R.string.mark_as_bad_habit)) {
-                    if (isBadHabit) {
-                        BadHabitManager.removeBadHabit(requireContext(), pkg)
+                val hasLimit = AppLimitManager.hasLimit(requireContext(), pkg)
+                addOption(if (hasLimit) getString(R.string.remove_time_limit) else getString(R.string.set_time_limit)) {
+                    if (hasLimit) {
+                        AppLimitManager.removeLimit(requireContext(), pkg)
                     } else {
                         showBadHabitTimePicker(pkg)
                     }
@@ -1182,22 +1180,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             dialog.dismiss()
             showWidgetPicker()
         }
-        view.findViewById<TextView>(R.id.menuFocusMode).setOnClickListener {
-            dialog.dismiss()
-            showFocusModeDialog()
-        }
         view.findViewById<TextView>(R.id.menuQuickNote).setOnClickListener {
             dialog.dismiss()
             QuickNoteManager.setEnabled(requireContext(), true)
             showQuickNoteDialog()
-        }
-        view.findViewById<TextView>(R.id.menuScreenTime).setOnClickListener {
-            dialog.dismiss()
-            openScreenTimeDigitalWellbeing()
-        }
-        view.findViewById<TextView>(R.id.menuGrayscale).setOnClickListener {
-            dialog.dismiss()
-            toggleGrayscale()
         }
         view.findViewById<TextView>(R.id.menuSettings).setOnClickListener {
             dialog.dismiss()
@@ -1219,11 +1205,12 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     private fun toggleGrayscale() {
-        GrayscaleManager.toggle(requireContext())
-        if (GrayscaleManager.isEnabled(requireContext()))
-            GrayscaleManager.apply(binding.root)
-        else
-            GrayscaleManager.remove(binding.root)
+        if (!GrayscaleManager.toggle(requireContext())) {
+            requireContext().showToast(getString(R.string.grayscale_open_settings))
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } catch (_: Exception) { }
+        }
     }
 
     // ─── Multi-widget system ───
@@ -1414,6 +1401,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                     showWidgetOptionsDialog(widgetId)
                 }
             })
+        widgetGestureDetectors.add(gestureDetector)
         val overlay = View(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1421,8 +1409,9 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
             )
             contentDescription = "Widget"
             setOnTouchListener { _, event ->
-                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                    longPressDetected = false
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> longPressDetected = false
+                    MotionEvent.ACTION_CANCEL -> longPressDetected = false
                 }
                 gestureDetector.onTouchEvent(event)
                 if (longPressDetected) {
@@ -1430,7 +1419,10 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
                 } else {
                     // Forward event to the widget view underneath
                     hostView.dispatchTouchEvent(event)
-                    false
+                    // Must return true to keep receiving ACTION_UP/MOVE,
+                    // otherwise GestureDetector never sees UP and the
+                    // long-press timer always fires.
+                    true
                 }
             }
         }
@@ -1867,6 +1859,7 @@ class HomeFragment : Fragment(), View.OnClickListener, View.OnLongClickListener 
     }
 
     override fun onDestroyView() {
+        widgetGestureDetectors.clear()
         widgetRestoreQueue.clear()
         mainActivityOrNull?.let {
             it.onWidgetBindResult = null

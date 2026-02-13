@@ -25,16 +25,6 @@
         android:textColor="?attr/primaryColor" />
 
     <TextView
-        android:id="@+id/menuFocusMode"
-        style="@style/TextSmall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="14dp"
-        android:text="@string/focus_mode"
-        android:textColor="?attr/primaryColor" />
-
-    <TextView
         android:id="@+id/menuQuickNote"
         style="@style/TextSmall"
         android:layout_width="match_parent"
@@ -42,26 +32,6 @@
         android:paddingHorizontal="24dp"
         android:paddingVertical="14dp"
         android:text="@string/quick_note"
-        android:textColor="?attr/primaryColor" />
-
-    <TextView
-        android:id="@+id/menuScreenTime"
-        style="@style/TextSmall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="14dp"
-        android:text="@string/screen_time"
-        android:textColor="?attr/primaryColor" />
-
-    <TextView
-        android:id="@+id/menuGrayscale"
-        style="@style/TextSmall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="14dp"
-        android:text="@string/grayscale"
         android:textColor="?attr/primaryColor" />
 
     <TextView

@@ -10,7 +10,7 @@ import android.widget.PopupMenu
 import android.widget.ScrollView
 import android.widget.TextView
 import app.olauncher.R
-import app.olauncher.helper.ScreenTimeLimitManager
+import app.olauncher.helper.AppLimitManager
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.formattedTimeSpent
 import app.olauncher.helper.getColorFromAttr
@@ -18,7 +18,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 
 /**
  * A BottomSheetDialog that shows the most-used apps with preset limit options.
- * Users can assign per-app daily time limits (soft warnings only).
+ * Users can assign per-app daily time limits with dialog-based warnings.
  *
  * @param context The activity context
  * @param appUsageMap Map of packageName to today's usage in milliseconds, from the ViewModel
@@ -53,7 +53,7 @@ class ScreenTimeLimitDialog(
 
         // Title
         val titleView = TextView(context).apply {
-            text = "Set Time Limits"
+            text = context.getString(R.string.app_limits)
             textSize = 18f
             setTextColor(textColor)
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -67,7 +67,6 @@ class ScreenTimeLimitDialog(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                // Limit max height so the dialog is scrollable
                 height = LinearLayout.LayoutParams.WRAP_CONTENT
             }
         }
@@ -77,7 +76,7 @@ class ScreenTimeLimitDialog(
         }
 
         // Sort apps by usage descending, take top 15
-        val currentLimits = ScreenTimeLimitManager.getLimits(context)
+        val currentLimits = AppLimitManager.getAllLimits(context)
         val sortedApps = appUsageMap.entries
             .sortedByDescending { it.value }
             .take(15)
@@ -168,10 +167,10 @@ class ScreenTimeLimitDialog(
             val selected = limitOptions[menuItem.itemId]
             if (selected.minutes < 0) {
                 // "Unlimited" means remove the limit
-                ScreenTimeLimitManager.removeLimit(context, packageName)
+                AppLimitManager.removeLimit(context, packageName)
                 limitView.text = "Unlimited"
             } else {
-                ScreenTimeLimitManager.setLimit(context, packageName, selected.minutes)
+                AppLimitManager.setLimit(context, packageName, selected.minutes)
                 limitView.text = selected.label
             }
             true

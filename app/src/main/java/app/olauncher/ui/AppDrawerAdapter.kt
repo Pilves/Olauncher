@@ -20,10 +20,8 @@ import androidx.recyclerview.widget.RecyclerView
 import app.olauncher.R
 import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
-import app.olauncher.data.Prefs
 import app.olauncher.databinding.AdapterAppDrawerBinding
-import app.olauncher.helper.BadHabitManager
-import app.olauncher.helper.HabitStreakManager
+import app.olauncher.helper.AppLimitManager
 import app.olauncher.helper.IconPackManager
 import app.olauncher.helper.getColorFromAttr
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -246,15 +244,8 @@ class AppDrawerAdapter(
                 }
 
                 val timeMs = usageStats[appModel.appPackage] ?: 0L
-                val streakDisplay = if (appModel.appPackage.isNotEmpty())
-                    HabitStreakManager.getStreakDisplay(root.context, appModel.appPackage)
-                else null
                 if (timeMs > 0 && appModel.appPackage.isNotEmpty()) {
-                    val usageText = root.context.formattedTimeSpent(timeMs)
-                    appUsageTime.text = if (streakDisplay != null) "$usageText · $streakDisplay" else usageText
-                    appUsageTime.visibility = View.VISIBLE
-                } else if (streakDisplay != null) {
-                    appUsageTime.text = streakDisplay
+                    appUsageTime.text = root.context.formattedTimeSpent(timeMs)
                     appUsageTime.visibility = View.VISIBLE
                 } else {
                     appUsageTime.visibility = View.GONE
@@ -268,21 +259,16 @@ class AppDrawerAdapter(
                             root.context.getString(R.string.adapter_show)
                         else
                             root.context.getString(R.string.adapter_hide)
-                        appHabit.text = if (HabitStreakManager.isHabitApp(root.context, appModel.appPackage))
-                            root.context.getString(R.string.unmark_habit)
-                        else
-                            root.context.getString(R.string.mark_as_habit)
                         appTitle.visibility = View.INVISIBLE
                         appHideLayout.visibility = View.VISIBLE
                         appRename.isVisible = flag != Constants.FLAG_HIDDEN_APPS
-                        val habitEnabled = Prefs(root.context).habitTrackingEnabled
-                        appHabit.isVisible = flag != Constants.FLAG_HIDDEN_APPS && habitEnabled
-                        appBadHabit.isVisible = flag != Constants.FLAG_HIDDEN_APPS && habitEnabled
+                        appHabit.isVisible = false
+                        appBadHabit.isVisible = flag != Constants.FLAG_HIDDEN_APPS
                         if (appBadHabit.isVisible) {
-                            appBadHabit.text = if (BadHabitManager.isBadHabitApp(root.context, appModel.appPackage))
-                                root.context.getString(R.string.unmark_bad_habit)
+                            appBadHabit.text = if (AppLimitManager.hasLimit(root.context, appModel.appPackage))
+                                root.context.getString(R.string.remove_time_limit)
                             else
-                                root.context.getString(R.string.bad_habit)
+                                root.context.getString(R.string.set_time_limit)
                         }
                     }
                     true
@@ -363,40 +349,14 @@ class AppDrawerAdapter(
                     }
                 }
                 appInfo.setOnClickListener { appInfoListener(appModel) }
-                appHabit.setOnClickListener {
-                    if (appModel.appPackage.isNotEmpty()) {
-                        if (HabitStreakManager.isHabitApp(root.context, appModel.appPackage)) {
-                            HabitStreakManager.removeHabitApp(root.context, appModel.appPackage)
-                        } else {
-                            HabitStreakManager.addHabitApp(root.context, appModel.appPackage)
-                            // Remove from bad habits if present (mutual exclusion)
-                            BadHabitManager.removeBadHabit(root.context, appModel.appPackage)
-                        }
-                        appHideLayout.visibility = View.GONE
-                        appTitle.visibility = View.VISIBLE
-                        // Refresh streak display
-                        val streakDisplay = HabitStreakManager.getStreakDisplay(root.context, appModel.appPackage)
-                        val timeMs = usageStats[appModel.appPackage] ?: 0L
-                        if (timeMs > 0) {
-                            val usageText = root.context.formattedTimeSpent(timeMs)
-                            appUsageTime.text = if (streakDisplay != null) "$usageText · $streakDisplay" else usageText
-                            appUsageTime.visibility = View.VISIBLE
-                        } else if (streakDisplay != null) {
-                            appUsageTime.text = streakDisplay
-                            appUsageTime.visibility = View.VISIBLE
-                        } else {
-                            appUsageTime.visibility = View.GONE
-                        }
-                    }
-                }
                 appBadHabit.setOnClickListener {
                     if (appModel.appPackage.isNotEmpty()) {
-                        if (BadHabitManager.isBadHabitApp(root.context, appModel.appPackage)) {
-                            BadHabitManager.removeBadHabit(root.context, appModel.appPackage)
+                        if (AppLimitManager.hasLimit(root.context, appModel.appPackage)) {
+                            AppLimitManager.removeLimit(root.context, appModel.appPackage)
                             appHideLayout.visibility = View.GONE
                             appTitle.visibility = View.VISIBLE
                         } else {
-                            showBadHabitTimePicker(root.context, appModel.appPackage) {
+                            showTimeLimitPicker(root.context, appModel.appPackage) {
                                 appHideLayout.visibility = View.GONE
                                 appTitle.visibility = View.VISIBLE
                             }
@@ -426,7 +386,7 @@ class AppDrawerAdapter(
             }
         }
 
-        private fun showBadHabitTimePicker(context: Context, packageName: String, onDone: () -> Unit) {
+        private fun showTimeLimitPicker(context: Context, packageName: String, onDone: () -> Unit) {
             val dialog = BottomSheetDialog(context)
             val container = android.widget.LinearLayout(context).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
@@ -459,9 +419,7 @@ class AppDrawerAdapter(
                     setTextColor(context.getColorFromAttr(R.attr.primaryColor))
                     setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
                     setOnClickListener {
-                        BadHabitManager.addBadHabit(context, packageName, minutes)
-                        // Remove from good habits (mutual exclusion)
-                        HabitStreakManager.removeHabitApp(context, packageName)
+                        AppLimitManager.setLimit(context, packageName, minutes)
                         dialog.dismiss()
                         onDone()
                     }

@@ -98,7 +98,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
         deviceManager = requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         componentName = ComponentName(requireContext(), DeviceAdmin::class.java)
-        checkAdminPermission()
 
         binding.homeAppsNum.text = prefs.homeAppsNum.toString()
         populateKeyboardText()
@@ -106,8 +105,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         populateSortByUsage()
         populateWidgetPlacement()
         populateShowIcons()
-        populateHabitTracking()
-        populateLockSettings()
         populateWallpaperText()
         populateAppThemeText()
         populateTextSize()
@@ -116,6 +113,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         populateDateTime()
         populateSwipeApps()
         populateSwipeDownAction()
+        populateDoubleTapAction()
         populateWellbeingSection()
         initClickListeners()
         initObservers()
@@ -124,7 +122,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     override fun onClick(view: View) {
         binding.appsNumSelectLayout.visibility = View.GONE
         binding.dateTimeSelectLayout.visibility = View.GONE
-        binding.appThemeSelectLayout.visibility = View.GONE
         binding.swipeDownSelectLayout.visibility = View.GONE
         binding.flSwipeDown.visibility = View.GONE
         binding.textSizesLayout.visibility = View.GONE
@@ -137,7 +134,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.sortByUsage -> toggleSortByUsage()
             R.id.appInfo -> openAppInfo(requireContext(), Process.myUserHandle(), BuildConfig.APPLICATION_ID)
             R.id.setLauncher -> viewModel.resetLauncherLiveData.call()
-            R.id.toggleLock -> toggleLockMode()
             R.id.autoShowKeyboard -> toggleKeyboardText()
             R.id.homeAppsNum -> binding.appsNumSelectLayout.visibility = View.VISIBLE
             R.id.dailyWallpaperUrl -> requireContext().openUrl(prefs.dailyWallpaperUrl)
@@ -152,10 +148,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.dateTimeOn -> toggleDateTime(Constants.DateTime.ON)
             R.id.dateTimeOff -> toggleDateTime(Constants.DateTime.OFF)
             R.id.dateOnly -> toggleDateTime(Constants.DateTime.DATE_ONLY)
-            R.id.appThemeText -> binding.appThemeSelectLayout.visibility = View.VISIBLE
-            R.id.themeLight -> updateTheme(AppCompatDelegate.MODE_NIGHT_NO)
-            R.id.themeDark -> updateTheme(AppCompatDelegate.MODE_NIGHT_YES)
-            R.id.themeSystem -> updateTheme(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            R.id.appThemeText -> showThemePicker()
             R.id.textSizeValue -> binding.textSizesLayout.visibility = View.VISIBLE
             R.id.actionAccessibility -> openAccessibilityService()
             R.id.closeAccessibility -> toggleAccessibilityVisibility(false)
@@ -189,8 +182,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
             R.id.widgetPlacement -> toggleWidgetPlacement()
             R.id.showIconsToggle -> toggleShowIcons()
-            R.id.habitTrackingToggle -> toggleHabitTracking()
-
             R.id.exportSettings -> exportSettings()
             R.id.importSettings -> confirmImportSettings()
             R.id.aboutOlauncher -> requireContext().openUrl(Constants.URL_ABOUT_OLAUNCHER)
@@ -198,10 +189,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
             R.id.focusModeToggle -> showFocusModeFromSettings()
             R.id.screenTimeLimitsToggle -> showScreenTimeLimitsDialog()
-            R.id.grayscaleToggle -> {
-                GrayscaleManager.toggle(requireContext())
-                populateWellbeingSection()
-            }
+            R.id.grayscaleToggle -> toggleGrayscaleFromSettings()
             R.id.doubleTapAction -> showDoubleTapActionPicker()
             R.id.gestureLettersToggle -> {
                 if (GestureLetterManager.isEnabled(requireContext())) {
@@ -219,7 +207,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                 }
                 populateWellbeingSection()
             }
-            R.id.themeScheduleToggle -> showThemeSchedulePicker()
         }
     }
 
@@ -232,14 +219,10 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             }
 
             R.id.dailyWallpaper -> removeWallpaper()
-            R.id.appThemeText -> {
-                binding.appThemeSelectLayout.visibility = View.VISIBLE
-                binding.themeSystem.visibility = View.VISIBLE
-            }
+            R.id.appThemeText -> showThemePicker()
 
             R.id.swipeLeftApp -> toggleSwipeLeft()
             R.id.swipeRightApp -> toggleSwipeRight()
-            R.id.toggleLock -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         return true
     }
@@ -252,8 +235,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
             val city = WeatherManager.getCityName(requireContext())
             city.ifEmpty { getString(R.string.on) }
         } else getString(R.string.off)
-        binding.doubleTapAction?.text = getDoubleTapLabel()
-        binding.themeScheduleToggle?.text = getThemeScheduleLabel()
     }
 
     private fun getDoubleTapLabel(): String {
@@ -269,14 +250,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         }
     }
 
-    private fun getThemeScheduleLabel(): String {
-        return when (ThemeScheduleManager.getMode(requireContext())) {
-            Constants.ThemeScheduleMode.SCHEDULED -> getString(R.string.scheduled)
-            Constants.ThemeScheduleMode.SUNRISE_SUNSET -> getString(R.string.sunrise_sunset)
-            else -> getString(R.string.manual)
-        }
-    }
-
     private fun initClickListeners() {
         binding.olauncherHiddenApps.setOnClickListener(this)
         binding.scrollLayout.setOnClickListener(this)
@@ -286,13 +259,12 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.importSettings?.setOnClickListener(this)
         binding.aboutOlauncher.setOnClickListener(this)
         binding.autoShowKeyboard.setOnClickListener(this)
-        binding.toggleLock.setOnClickListener(this)
+        binding.doubleTapAction?.setOnClickListener(this)
         binding.homeAppsNum.setOnClickListener(this)
         binding.screenTimeOnOff.setOnClickListener(this)
         binding.sortByUsage?.setOnClickListener(this)
         binding.widgetPlacement?.setOnClickListener(this)
         binding.showIconsToggle?.setOnClickListener(this)
-        binding.habitTrackingToggle?.setOnClickListener(this)
         binding.dailyWallpaperUrl.setOnClickListener(this)
         binding.dailyWallpaper.setOnClickListener(this)
         binding.alignment.setOnClickListener(this)
@@ -311,9 +283,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.search.setOnClickListener(this)
         binding.notifications.setOnClickListener(this)
         binding.appThemeText.setOnClickListener(this)
-        binding.themeLight.setOnClickListener(this)
-        binding.themeDark.setOnClickListener(this)
-        binding.themeSystem.setOnClickListener(this)
         binding.textSizeValue.setOnClickListener(this)
         binding.actionAccessibility.setOnClickListener(this)
         binding.closeAccessibility.setOnClickListener(this)
@@ -343,18 +312,15 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.focusModeToggle?.setOnClickListener(this)
         binding.screenTimeLimitsToggle?.setOnClickListener(this)
         binding.grayscaleToggle?.setOnClickListener(this)
-        binding.doubleTapAction?.setOnClickListener(this)
         binding.gestureLettersToggle?.setOnClickListener(this)
         binding.tvGestures?.setOnClickListener(this)
         binding.weatherToggle?.setOnClickListener(this)
-        binding.themeScheduleToggle?.setOnClickListener(this)
 
         binding.dailyWallpaper.setOnLongClickListener(this)
         binding.alignment.setOnLongClickListener(this)
         binding.appThemeText.setOnLongClickListener(this)
         binding.swipeLeftApp.setOnLongClickListener(this)
         binding.swipeRightApp.setOnLongClickListener(this)
-        binding.toggleLock.setOnLongClickListener(this)
     }
 
     private fun initObservers() {
@@ -457,12 +423,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         )
     }
 
-    private fun checkAdminPermission() {
-        val isAdmin: Boolean = deviceManager.isAdminActive(componentName)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P)
-            prefs.lockModeOn = isAdmin
-    }
-
     private fun toggleAccessibilityVisibility(show: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
             binding.notWorking.visibility = View.VISIBLE
@@ -474,35 +434,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun openAccessibilityService() {
         toggleAccessibilityVisibility(false)
-        // prefs.lockModeOn = true
-        populateLockSettings()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-    }
-
-    private fun toggleLockMode() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            toggleAccessibilityVisibility(true)
-            if (prefs.lockModeOn) {
-                prefs.lockModeOn = false
-                removeActiveAdmin()
-            }
-        } else {
-            val isAdmin: Boolean = deviceManager.isAdminActive(componentName)
-            if (isAdmin) {
-                removeActiveAdmin("Admin permission removed.")
-                prefs.lockModeOn = false
-            } else {
-                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                intent.putExtra(
-                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                    getString(R.string.admin_permission_message)
-                )
-                (requireActivity() as MainActivity).enableAdminLauncher.launch(intent)
-            }
-        }
-        populateLockSettings()
     }
 
     private fun removeActiveAdmin(toastMessage: String? = null) {
@@ -594,10 +527,13 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun populateAppThemeText(appTheme: Int = prefs.appTheme) {
-        when (appTheme) {
-            AppCompatDelegate.MODE_NIGHT_YES -> binding.appThemeText.text = getString(R.string.dark)
-            AppCompatDelegate.MODE_NIGHT_NO -> binding.appThemeText.text = getString(R.string.light)
-            else -> binding.appThemeText.text = getString(R.string.system_default)
+        val scheduleMode = ThemeScheduleManager.getMode(requireContext())
+        binding.appThemeText.text = when {
+            scheduleMode == Constants.ThemeScheduleMode.SCHEDULED -> getString(R.string.scheduled)
+            scheduleMode == Constants.ThemeScheduleMode.SUNRISE_SUNSET -> getString(R.string.sunrise_sunset)
+            appTheme == AppCompatDelegate.MODE_NIGHT_YES -> getString(R.string.dark)
+            appTheme == AppCompatDelegate.MODE_NIGHT_NO -> getString(R.string.light)
+            else -> getString(R.string.system_default)
         }
     }
 
@@ -737,15 +673,6 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         binding.showIconsToggle?.text = if (prefs.showIcons) getString(R.string.on) else getString(R.string.off)
     }
 
-    private fun toggleHabitTracking() {
-        prefs.habitTrackingEnabled = !prefs.habitTrackingEnabled
-        populateHabitTracking()
-    }
-
-    private fun populateHabitTracking() {
-        binding.habitTrackingToggle?.text = if (prefs.habitTrackingEnabled) getString(R.string.on) else getString(R.string.off)
-    }
-
     private fun populateKeyboardText() {
         if (prefs.autoShowKeyboard) binding.autoShowKeyboard.text = getString(R.string.on)
         else binding.autoShowKeyboard.text = getString(R.string.off)
@@ -777,18 +704,8 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         else getString(R.string.bottom_off)
     }
 
-    private fun populateLockSettings() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            binding.toggleLock.text = getString(
-                if (isAccessServiceEnabled(requireContext())) R.string.on
-                else R.string.off
-            )
-        } else {
-            binding.toggleLock.text = getString(
-                if (prefs.lockModeOn) R.string.on
-                else R.string.off
-            )
-        }
+    private fun populateDoubleTapAction() {
+        binding.doubleTapAction?.text = getDoubleTapLabel()
     }
 
     private fun populateSwipeDownAction() {
@@ -944,12 +861,23 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                         showAppListForSwipe(Constants.FLAG_SET_DOUBLE_TAP_APP)
                     }
                     if (actionValue == Constants.GestureAction.LOCK_SCREEN) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !isAccessServiceEnabled(requireContext())) {
-                            toggleAccessibilityVisibility(true)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            if (!isAccessServiceEnabled(requireContext())) {
+                                toggleAccessibilityVisibility(true)
+                            }
+                        } else {
+                            if (!deviceManager.isAdminActive(componentName)) {
+                                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                                intent.putExtra(
+                                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                    getString(R.string.admin_permission_message)
+                                )
+                                (requireActivity() as MainActivity).enableAdminLauncher.launch(intent)
+                            }
                         }
                     }
-                    populateWellbeingSection()
-                    populateLockSettings()
+                    populateDoubleTapAction()
                 }
             }
             container.addView(tv)
@@ -1063,11 +991,13 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         dialog.show()
     }
 
-    private fun showThemeSchedulePicker() {
-        val modes = arrayOf(
-            getString(R.string.manual) to Constants.ThemeScheduleMode.MANUAL,
-            getString(R.string.scheduled) to Constants.ThemeScheduleMode.SCHEDULED,
-            getString(R.string.sunrise_sunset) to Constants.ThemeScheduleMode.SUNRISE_SUNSET,
+    private fun showThemePicker() {
+        val options = arrayOf(
+            getString(R.string.light) to "light",
+            getString(R.string.dark) to "dark",
+            getString(R.string.system_default) to "system",
+            getString(R.string.scheduled) to "scheduled",
+            getString(R.string.sunrise_sunset) to "sunrise_sunset",
         )
 
         val dialog = BottomSheetDialog(requireContext())
@@ -1087,7 +1017,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         container.addView(handle)
 
         val title = android.widget.TextView(requireContext()).apply {
-            text = getString(R.string.theme_schedule)
+            text = getString(R.string.theme_mode)
             textSize = 14f
             setTextColor(requireContext().getColorFromAttr(R.attr.primaryColorTrans50))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1095,7 +1025,7 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
         }
         container.addView(title)
 
-        for ((label, mode) in modes) {
+        for ((label, mode) in options) {
             val tv = android.widget.TextView(requireContext()).apply {
                 text = label
                 textSize = 16f
@@ -1103,13 +1033,33 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
                 setPadding(24.dpToPx(), 14.dpToPx(), 24.dpToPx(), 14.dpToPx())
                 setOnClickListener {
                     dialog.dismiss()
-                    ThemeScheduleManager.setMode(requireContext(), mode)
-                    if (mode != Constants.ThemeScheduleMode.MANUAL) {
-                        viewModel.startThemeScheduleWorker()
-                    } else {
-                        viewModel.cancelThemeScheduleWorker()
+                    when (mode) {
+                        "light" -> {
+                            ThemeScheduleManager.setMode(requireContext(), Constants.ThemeScheduleMode.MANUAL)
+                            viewModel.cancelThemeScheduleWorker()
+                            updateTheme(AppCompatDelegate.MODE_NIGHT_NO)
+                        }
+                        "dark" -> {
+                            ThemeScheduleManager.setMode(requireContext(), Constants.ThemeScheduleMode.MANUAL)
+                            viewModel.cancelThemeScheduleWorker()
+                            updateTheme(AppCompatDelegate.MODE_NIGHT_YES)
+                        }
+                        "system" -> {
+                            ThemeScheduleManager.setMode(requireContext(), Constants.ThemeScheduleMode.MANUAL)
+                            viewModel.cancelThemeScheduleWorker()
+                            updateTheme(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+                        }
+                        "scheduled" -> {
+                            ThemeScheduleManager.setMode(requireContext(), Constants.ThemeScheduleMode.SCHEDULED)
+                            viewModel.startThemeScheduleWorker()
+                            populateAppThemeText()
+                        }
+                        "sunrise_sunset" -> {
+                            ThemeScheduleManager.setMode(requireContext(), Constants.ThemeScheduleMode.SUNRISE_SUNSET)
+                            viewModel.startThemeScheduleWorker()
+                            populateAppThemeText()
+                        }
                     }
-                    populateWellbeingSection()
                 }
             }
             container.addView(tv)
@@ -1208,6 +1158,16 @@ class SettingsFragment : Fragment(), View.OnClickListener, View.OnLongClickListe
 
         dialog.setContentView(container)
         dialog.show()
+    }
+
+    private fun toggleGrayscaleFromSettings() {
+        if (!GrayscaleManager.toggle(requireContext())) {
+            requireContext().showToast(getString(R.string.grayscale_open_settings))
+            try {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } catch (_: Exception) { }
+        }
+        populateWellbeingSection()
     }
 
     private fun showFocusModeFromSettings() {
